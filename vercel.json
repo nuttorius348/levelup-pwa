@@ -1,0 +1,24 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-reset",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/notifications?job=morning-quote",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/notifications?job=daily-reminder",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/notifications?job=workout-reminder",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/notifications?job=streak-reminder",
+      "schedule": "0 20 * * *"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Global Styles — iOS PWA optimized
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* Brand colors as CSS variables for dynamic theming */
+    --color-brand-500: #5c7cfa;
+    --color-brand-600: #4c6ef5;
+    --color-brand-700: #4263eb;
+    --color-xp-gold: #FFD700;
+    --color-coin: #F5A623;
+
+    /* iOS safe areas */
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+    --sar: env(safe-area-inset-right);
+  }
+
+  html {
+    /* Prevent text size adjustment on iOS orientation change */
+    -webkit-text-size-adjust: 100%;
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    /* Prevent overscroll bounce */
+    overscroll-behavior: none;
+  }
+
+  body {
+    @apply bg-slate-950 text-white antialiased;
+    /* Prevent pull-to-refresh in PWA */
+    overscroll-behavior-y: contain;
+    /* Smooth font rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Safe area padding for notch */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Disable tap highlight on iOS */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent selection on interactive elements */
+  button, a, [role="button"] {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  /* Fix iOS input zoom (font-size must be >= 16px) */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+@layer components {
+  /* XP progress bar gradient */
+  .xp-bar {
+    @apply h-2 rounded-full overflow-hidden bg-slate-800;
+  }
+  .xp-bar-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+    background: linear-gradient(90deg, var(--color-brand-500), var(--color-xp-gold));
+  }
+
+  /* Glass card effect */
+  .glass-card {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl;
+  }
+
+  /* Bottom nav safe area */
+  .bottom-nav {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* PWA standalone detection */
+  @media (display-mode: standalone) {
+    .install-prompt {
+      display: none !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
