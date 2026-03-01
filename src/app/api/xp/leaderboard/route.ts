@@ -31,10 +31,18 @@ export async function GET(request: NextRequest) {
       .order('total_xp', { ascending: false })
       .range(from, to);
 
-    // Get current user's rank
-    const { data: userRank } = await supabase.rpc('get_user_rank', {
-      p_user_id: user.id,
-    });
+    // Get current user's rank (gracefully handle missing RPC)
+    let userRank = null;
+    try {
+      const { data: rankData } = await supabase.rpc('get_user_rank', {
+        p_user_id: user.id,
+      });
+      userRank = rankData;
+    } catch {
+      // RPC may not exist — compute rank manually
+      const idx = (leaderboard ?? []).findIndex((e: any) => e.id === user.id);
+      if (idx >= 0) userRank = from + idx + 1;
+    }
 
     return NextResponse.json({
       leaderboard: (leaderboard ?? []).map((entry: any, index: number) => ({

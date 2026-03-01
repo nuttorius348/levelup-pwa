@@ -678,7 +678,7 @@ function WorkoutHistory({
                     <div className="flex gap-3 text-xs text-zinc-400">
                       <span>⏱ {entry.durationMinutes} min</span>
                       <span>🏋️ {entry.exerciseCount} exercises</span>
-                      {entry.totalVolume > 0 && <span>📊 {entry.totalVolume.toLocaleString()} lbs</span>}
+                      {(entry.totalVolume ?? 0) > 0 && <span>📊 {(entry.totalVolume ?? 0).toLocaleString()} lbs</span>}
                       <span className="text-indigo-400 ml-auto">+{entry.xpEarned} XP</span>
                     </div>
                   </motion.div>
@@ -752,9 +752,9 @@ function ExerciseProgress({
   // Calculate improvement stats
   const first = entries[entries.length - 1];
   const last = entries[0];
-  const weightImproved = first && last ? last.maxWeight - first.maxWeight : 0;
-  const repsImproved = first && last ? last.maxReps - first.maxReps : 0;
-  const volumeImproved = first && last ? last.totalVolume - first.totalVolume : 0;
+  const weightImproved = first && last ? (last.maxWeight ?? 0) - (first.maxWeight ?? 0) : 0;
+  const repsImproved = first && last ? (last.maxReps ?? 0) - (first.maxReps ?? 0) : 0;
+  const volumeImproved = first && last ? (last.totalVolume ?? 0) - (first.totalVolume ?? 0) : 0;
 
   return (
     <div className="min-h-screen bg-black px-4 pb-20 pt-12 text-white">
@@ -795,7 +795,7 @@ function ExerciseProgress({
               <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 text-center">
                 <p className="text-[10px] text-zinc-500 uppercase">Volume</p>
                 <p className={`text-lg font-bold ${volumeImproved > 0 ? 'text-green-400' : volumeImproved < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
-                  {volumeImproved > 0 ? '+' : ''}{volumeImproved.toLocaleString()}
+                  {volumeImproved > 0 ? '+' : ''}{(volumeImproved ?? 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -805,8 +805,8 @@ function ExerciseProgress({
           <h3 className="text-sm font-semibold text-zinc-400 mb-3">Session History</h3>
           <div className="space-y-2">
             {entries.map((entry, i) => {
-              const maxVol = Math.max(...entries.map(e => e.totalVolume), 1);
-              const pct = Math.round((entry.totalVolume / maxVol) * 100);
+              const maxVol = Math.max(...entries.map(e => e.totalVolume ?? 0), 1);
+              const pct = Math.round(((entry.totalVolume ?? 0) / maxVol) * 100);
               const date = new Date(entry.date);
               const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -821,8 +821,8 @@ function ExerciseProgress({
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs text-zinc-500">{dateStr}</span>
                     <div className="flex gap-3 text-xs">
-                      <span className="text-zinc-400">{entry.maxWeight} lbs × {entry.maxReps} reps</span>
-                      <span className="text-zinc-500">{entry.totalSets} sets</span>
+                      <span className="text-zinc-400">{entry.maxWeight ?? 0} lbs × {entry.maxReps ?? 0} reps</span>
+                      <span className="text-zinc-500">{entry.totalSets ?? 0} sets</span>
                     </div>
                   </div>
                   {/* Volume bar */}
@@ -837,7 +837,7 @@ function ExerciseProgress({
                     />
                   </div>
                   <div className="text-right mt-1">
-                    <span className="text-[10px] text-zinc-500">{entry.totalVolume.toLocaleString()} lbs volume</span>
+                    <span className="text-[10px] text-zinc-500">{(entry.totalVolume ?? 0).toLocaleString()} lbs volume</span>
                   </div>
                 </motion.div>
               );
@@ -899,7 +899,7 @@ function Results({
         <StatCard label="Total Reps" value={String(session.totalReps)} />
         <StatCard
           label="Volume"
-          value={`${session.totalVolume.toLocaleString()} lbs`}
+          value={`${(session.totalVolume ?? 0).toLocaleString()} lbs`}
         />
         <StatCard
           label="Calories"

@@ -27,7 +27,7 @@ export default async function AppLayout({
     .single();
 
   return (
-    <div className="min-h-screen flex flex-col pb-safe-bottom">
+    <div className="min-h-screen flex flex-col">
       {/* Top XP Bar */}
       <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 pt-safe-top">
         <div className="px-4 py-2 flex items-center justify-between">
@@ -42,7 +42,7 @@ export default async function AppLayout({
               <span className="text-xs">🔥 {profile?.streak_days}</span>
             )}
             <span className="text-xs text-coin font-semibold">🪙 {profile?.coins ?? 0}</span>
-            <Link href="/settings" className="text-sm hover:opacity-80 transition">🔔</Link>
+            <Link href="/profile/settings" className="text-sm hover:opacity-80 transition">⚙️</Link>
           </div>
         </div>
         {/* XP Progress Bar */}
@@ -57,18 +57,18 @@ export default async function AppLayout({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 py-4 overflow-y-auto">
+      <main className="flex-1 px-4 py-4 pb-24 overflow-y-auto">
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="bottom-nav sticky bottom-0 z-50 bg-slate-950/90 backdrop-blur-xl border-t border-white/5">
+      {/* Bottom Navigation — fixed so it never moves on scroll */}
+      <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-xl border-t border-white/5">
         <div className="flex items-center justify-around py-2">
           <NavItem href="/dashboard" icon="🏠" label="Home" />
-          <NavItem href="/checklist" icon="📝" label="Tasks" />
+          <NavItem href="/tasks" icon="📝" label="Tasks" />
           <NavItem href="/routines" icon="✅" label="Routines" />
           <NavItem href="/workout" icon="💪" label="Workout" />
-          <NavItem href="/outfit" icon="👔" label="Outfit" />
+          <NavItem href="/leaderboard" icon="🏆" label="Ranks" />
           <NavItem href="/shop" icon="🛍️" label="Shop" />
         </div>
       </nav>

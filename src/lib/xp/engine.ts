@@ -205,6 +205,17 @@ export async function grantXP(params: GrantXPParams): Promise<GrantXPResult> {
     })
     .eq('id', userId);
 
+  // ── 11B. Sync to profiles table (used by layout/leaderboard) ─
+  await supabase
+    .from('profiles')
+    .update({
+      total_xp: newTotalXP,
+      current_level_xp: levelInfo.xpInLevel,
+      coins: newCoins,
+      level: newLevel,
+    })
+    .eq('id', userId);
+
   // ── 12. Level-up bonus ──────────────────────────────────────
   let levelUp: LevelUpEvent | undefined;
   if (newLevel > oldLevel) {

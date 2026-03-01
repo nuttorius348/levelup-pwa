@@ -40,6 +40,10 @@ export default function QuotePage() {
   const [error, setError] = useState<string | null>(null);
   const [totalXP, setTotalXP] = useState(0);
   const [stats, setStats] = useState({ totalReads: 0, uniqueReaders: 0 });
+  const [reflection, setReflection] = useState('');
+  const [hasProven, setHasProven] = useState(false);
+  const [provingRead, setProvingRead] = useState(false);
+  const [readResult, setReadResult] = useState<{ xp: number; message?: string } | null>(null);
 
   // ── Fetch Today's Quote ───────────────────────────────────
   useEffect(() => {
@@ -137,8 +141,83 @@ export default function QuotePage() {
                 quote={quote}
                 date={quoteDate}
                 onRead={handleQuoteRead}
-                autoMarkRead={true}
+                autoMarkRead={false}
               />
+
+              {/* Proof of Reading — Reflection */}
+              {!hasProven ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="max-w-md mx-auto mt-6 p-5 rounded-xl bg-white/[0.03] border border-white/10 space-y-3"
+                >
+                  <h3 className="font-semibold text-white flex items-center gap-2">
+                    <span>✍️</span>
+                    <span>Prove You Read It</span>
+                  </h3>
+                  <p className="text-xs text-white/40">
+                    Write a short reflection about what this quote means to you (min 15 characters) to earn XP.
+                  </p>
+                  <textarea
+                    value={reflection}
+                    onChange={e => setReflection(e.target.value)}
+                    placeholder="What resonated with you about this quote?"
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm resize-none"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs ${reflection.length >= 15 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                      {reflection.length}/15 characters
+                    </span>
+                    <button
+                      onClick={async () => {
+                        if (reflection.trim().length < 15) return;
+                        setProvingRead(true);
+                        try {
+                          const res = await fetch('/api/ai/quote/read', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ source: 'web', reflection: reflection.trim() }),
+                          });
+                          const data = await res.json();
+                          setHasProven(true);
+                          if (data.xp) {
+                            setReadResult({ xp: data.xp.total ?? 0, message: data.message });
+                            handleQuoteRead(data.xp.total ?? 0);
+                          } else if (data.alreadyRead) {
+                            setReadResult({ xp: 0, message: 'Already read today!' });
+                          }
+                        } catch {
+                          // silent
+                        } finally {
+                          setProvingRead(false);
+                        }
+                      }}
+                      disabled={reflection.trim().length < 15 || provingRead}
+                      className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-30 text-white text-sm font-medium transition"
+                    >
+                      {provingRead ? '...' : '✨ Mark as Read & Earn XP'}
+                    </button>
+                  </div>
+                </motion.div>
+              ) : readResult && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="max-w-md mx-auto mt-6 p-5 rounded-xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20 text-center"
+                >
+                  <div className="text-3xl mb-2">✅</div>
+                  {readResult.xp > 0 ? (
+                    <>
+                      <p className="text-xl font-bold text-violet-400">+{readResult.xp} XP</p>
+                      <p className="text-sm text-white/60 mt-1">{readResult.message}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-white/60">{readResult.message ?? 'Quote marked as read!'}</p>
+                  )}
+                </motion.div>
+              )}
 
               {/* Stats */}
               <motion.div
