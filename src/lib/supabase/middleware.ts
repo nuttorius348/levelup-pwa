@@ -38,12 +38,14 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/signup') ||
     request.nextUrl.pathname.startsWith('/callback');
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+  const isPublicPage = request.nextUrl.pathname === '/offline' ||
+    request.nextUrl.pathname === '/pwa';
   const isPublicAsset = request.nextUrl.pathname.startsWith('/_next') ||
     request.nextUrl.pathname.startsWith('/icons') ||
     request.nextUrl.pathname === '/manifest.json' ||
     request.nextUrl.pathname === '/sw.js';
 
-  if (!user && !isAuthRoute && !isApiRoute && !isPublicAsset) {
+  if (!user && !isAuthRoute && !isApiRoute && !isPublicAsset && !isPublicPage) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
