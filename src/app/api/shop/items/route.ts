@@ -41,12 +41,31 @@ export async function GET(request: NextRequest) {
       inventory?.filter((i: any) => i.is_equipped).map((i: any) => i.item_id) ?? [],
     );
 
+    // Get user's coin balance
+    const { data: profile } = await supabase
+      .from('users')
+      .select('coins')
+      .eq('id', user.id)
+      .single();
+
+    // Transform DB fields → UserInventoryItem format expected by frontend
     return NextResponse.json({
       items: (items ?? []).map((item: any) => ({
-        ...item,
+        id: item.id,
+        slug: item.name?.toLowerCase().replace(/\s+/g, '-') ?? item.id,
+        name: item.name ?? 'Item',
+        description: item.description ?? '',
+        category: item.category,
+        icon: item.icon_url ?? '🎁',
+        imageUrl: item.preview_url ?? undefined,
+        costCoins: item.price_coins ?? 0,
+        levelRequired: item.level_required ?? 1,
+        rarity: (item.metadata as any)?.rarity ?? 'common',
+        effects: (item.metadata as any)?.effects ?? undefined,
         owned: ownedItemIds.has(item.id),
         equipped: equippedItemIds.has(item.id),
       })),
+      coins: profile?.coins ?? 0,
     });
   } catch (error) {
     console.error('[API] shop/items error:', error);

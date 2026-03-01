@@ -52,22 +52,61 @@ export default function OutfitUpload({ onSubmit, isLoading = false }: OutfitUplo
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── File Selection ────────────────────────────────────────
+  // ── File Selection with auto-compression ──────────────
 
-  const handleFileSelect = useCallback((file: File) => {
+  const compressImage = useCallback(async (file: File, maxSizeKB = 900): Promise<File> => {
+    // If already small enough, return as-is
+    if (file.size <= maxSizeKB * 1024) return file;
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // Scale down to max 1200px on longest side
+        const maxDim = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          0.7,
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
+  }, []);
+
+  const handleFileSelect = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be under 5MB');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image must be under 10MB');
       return;
     }
 
-    setSelectedFile(file);
-    const url = URL.createObjectURL(file);
+    // Compress before setting — avoids Vercel 413 errors
+    const compressed = await compressImage(file);
+    setSelectedFile(compressed);
+    const url = URL.createObjectURL(compressed);
     setPreviewUrl(url);
-  }, []);
+  }, [compressImage]);
 
   const handleFileInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

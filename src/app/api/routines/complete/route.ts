@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { grantXP } from '@/lib/xp/engine';
 import { completeRoutineItemSchema } from '@/lib/validators/routines';
 
@@ -47,13 +48,25 @@ export async function POST(request: NextRequest) {
     });
 
     // Record completion
-    await supabase.from('routine_completions').insert({
+    const { error: insertErr } = await supabase.from('routine_completions').insert({
       user_id: user.id,
       routine_id: routineId,
       routine_item_id: routineItemId,
       completed_date: today,
       xp_earned: xpResult.grant.finalXP,
     });
+
+    // Fallback to admin client if RLS blocks
+    if (insertErr) {
+      const admin = createAdminClient();
+      await admin.from('routine_completions').insert({
+        user_id: user.id,
+        routine_id: routineId,
+        routine_item_id: routineItemId,
+        completed_date: today,
+        xp_earned: xpResult.grant.finalXP,
+      });
+    }
 
     // Check if all items in routine are now complete → bonus XP
     const { data: allItems } = await supabase

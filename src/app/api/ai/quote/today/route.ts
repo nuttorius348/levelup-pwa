@@ -59,34 +59,66 @@ function getThemeForDate(date: Date): QuoteTheme {
 // ── Route Handler ─────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
+  // Ultra-defensive: fallback ALWAYS works even if everything explodes
+  const getFallbackQuote = () => {
+    const dayIdx = new Date().getDate() % FALLBACK_QUOTES.length;
+    const fb = FALLBACK_QUOTES[dayIdx]!;
+    return NextResponse.json({
+      quote: {
+        text: fb.text,
+        theme: fb.theme,
+        tone: fb.tone,
+        attribution: fb.attribution,
+        tags: fb.tags,
+        followUp: undefined,
+      },
+      date: new Date().toISOString().split('T')[0],
+      stats: { totalReads: 0, uniqueReaders: 0 },
+      cached: false,
+      provider: 'fallback',
+      latencyMs: 0,
+    });
+  };
+
   try {
-    const supabase = await createServerSupabaseClient();
+    let supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>;
+    try {
+      supabase = await createServerSupabaseClient();
+    } catch {
+      // Can't create Supabase client — just return fallback
+      return getFallbackQuote();
+    }
+
     const today = new Date().toISOString().split('T')[0]!; // YYYY-MM-DD
 
     // ── Check cache first ────────────────────────────────────
-    const { data: cached } = await supabase
-      .from('daily_quotes')
-      .select('*')
-      .eq('quote_date', today)
-      .single();
+    try {
+      const { data: cached } = await supabase
+        .from('daily_quotes')
+        .select('*')
+        .eq('quote_date', today)
+        .single();
 
-    if (cached) {
-      return NextResponse.json({
-        quote: {
-          text: cached.quote_text,
-          theme: cached.theme,
-          tone: cached.tone,
-          attribution: cached.attribution,
-          tags: cached.tags,
-          followUp: cached.follow_up,
-        },
-        date: cached.quote_date,
-        stats: {
-          totalReads: cached.total_reads,
-          uniqueReaders: cached.unique_readers,
-        },
-        cached: true,
-      });
+      if (cached) {
+        return NextResponse.json({
+          quote: {
+            text: cached.quote_text,
+            theme: cached.theme,
+            tone: cached.tone,
+            attribution: cached.attribution,
+            tags: cached.tags,
+            followUp: cached.follow_up,
+          },
+          date: cached.quote_date,
+          stats: {
+            totalReads: cached.total_reads,
+            uniqueReaders: cached.unique_readers,
+          },
+          cached: true,
+        });
+      }
+    } catch {
+      // Table may not exist — continue to generate
     }
 
     // ── Generate fresh quote ─────────────────────────────────
@@ -114,7 +146,7 @@ export async function GET(request: NextRequest) {
       } else {
         // AI failed — use fallback
         const dayIdx = new Date().getDate() % FALLBACK_QUOTES.length;
-        const fb = FALLBACK_QUOTES[dayIdx];
+        const fb = FALLBACK_QUOTES[dayIdx]!;
         quoteData = fb;
         provider = 'fallback';
         fallbackUsed = true;
@@ -122,7 +154,7 @@ export async function GET(request: NextRequest) {
     } catch {
       // AI completely unavailable — use fallback
       const dayIdx = new Date().getDate() % FALLBACK_QUOTES.length;
-      const fb = FALLBACK_QUOTES[dayIdx];
+      const fb = FALLBACK_QUOTES[dayIdx]!;
       quoteData = fb;
       provider = 'fallback';
       fallbackUsed = true;
@@ -171,9 +203,23 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[API] /api/ai/quote/today error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
-    );
+    // Even if everything fails, return a fallback quote (never 500)
+    const dayIdx = new Date().getDate() % FALLBACK_QUOTES.length;
+    const fb = FALLBACK_QUOTES[dayIdx]!;
+    return NextResponse.json({
+      quote: {
+        text: fb.text,
+        theme: fb.theme,
+        tone: fb.tone,
+        attribution: fb.attribution,
+        tags: fb.tags,
+        followUp: undefined,
+      },
+      date: new Date().toISOString().split('T')[0],
+      stats: { totalReads: 0, uniqueReaders: 0 },
+      cached: false,
+      provider: 'fallback',
+      latencyMs: 0,
+    });
   }
 }

@@ -92,6 +92,40 @@ export default function WorkoutPage() {
   const [state, setState] = useState<PageState>({ view: 'home' });
   const [searchQuery, setSearchQuery] = useState('');
   const [customDifficulty, setCustomDifficulty] = useState<WorkoutDifficulty>('intermediate');
+  const [showAddCustom, setShowAddCustom] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customMuscle, setCustomMuscle] = useState('chest');
+  const [customCategory, setCustomCategory] = useState<'strength' | 'cardio' | 'flexibility' | 'bodyweight'>('strength');
+  const [userExercises, setUserExercises] = useState<Exercise[]>([]);
+
+  // Create a custom exercise from user input
+  const addCustomExercise = useCallback(() => {
+    if (!customName.trim()) return;
+    const id = `custom-${Date.now()}`;
+    const newEx: Exercise = {
+      id,
+      name: customName.trim(),
+      slug: customName.trim().toLowerCase().replace(/\s+/g, '-'),
+      category: customCategory,
+      primaryMuscle: customMuscle as any,
+      secondaryMuscles: [],
+      difficulty: 'intermediate',
+      equipment: customCategory === 'bodyweight' ? ['bodyweight'] : ['dumbbell'],
+      instructions: ['Perform the exercise with proper form.'],
+      tips: ['Focus on controlled movements.'],
+      caloriesPerMinute: 6,
+      isCompound: false,
+      aliases: [],
+    } as any;
+    setUserExercises(prev => [...prev, newEx]);
+    setCustomName('');
+    setShowAddCustom(false);
+
+    // Auto-add to selected if in custom builder view  
+    if (state.view === 'custom') {
+      setState({ view: 'custom', selectedExercises: [...state.selectedExercises, newEx] });
+    }
+  }, [customName, customMuscle, customCategory, state]);
 
   // ── Start a preset workout ──────────────────────────────────
 
@@ -119,16 +153,49 @@ export default function WorkoutPage() {
   const startCustom = useCallback(
     (exercises: Exercise[], difficulty: WorkoutDifficulty) => {
       const scaling = DIFFICULTY_SCALING[difficulty];
-      const builtExercises = WorkoutService.buildExerciseList(
-        exercises.map(e => e.id),
-        difficulty,
-        scaling,
-      );
+      
+      // For custom exercises not in the library, build workout exercises manually
+      const workoutExercises = exercises.map((ex, index) => {
+        // Try the library first
+        try {
+          const built = WorkoutService.buildExerciseList([ex.id], difficulty, scaling);
+          if (built.length > 0) return { ...built[0], orderIndex: index };
+        } catch {
+          // Not in library — build manually
+        }
+
+        // Manual build for custom exercises
+        const [minSets, maxSets] = scaling.setsRange;
+        const [minReps, maxReps] = scaling.repsRange;
+        const numSets = Math.round((minSets + maxSets) / 2);
+        const targetReps = Math.round((minReps + maxReps) / 2);
+        const baseRest = ex.isCompound ? 120 : 90;
+        const restSeconds = Math.round(baseRest * scaling.restMultiplier);
+
+        return {
+          id: `we-${Date.now()}-${index}`,
+          exerciseId: ex.id,
+          exercise: ex,
+          orderIndex: index,
+          sets: Array.from({ length: numSets }, (_, i) => ({
+            id: `set-${Date.now()}-${index}-${i}`,
+            setNumber: i + 1,
+            type: 'working' as const,
+            targetReps,
+            restAfterSeconds: restSeconds,
+            rpe: scaling.rpeSuggestion,
+            completed: false,
+            skipped: false,
+          })),
+          restBetweenSetsSeconds: restSeconds,
+        };
+      });
+
       const session = WorkoutService.createSession({
         userId: 'demo-user',
         title: 'Custom Workout',
         difficulty,
-        exercises: builtExercises,
+        exercises: workoutExercises as any,
       });
       setState({ view: 'session', session });
     },
@@ -214,9 +281,13 @@ export default function WorkoutPage() {
 
   if (state.view === 'custom') {
     const { selectedExercises } = state;
+    const allExercises = [...EXERCISE_LIBRARY, ...userExercises];
     const filtered = searchQuery
-      ? searchExercises(searchQuery)
-      : EXERCISE_LIBRARY;
+      ? allExercises.filter(ex =>
+          ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ex.primaryMuscle?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allExercises;
 
     const toggleExercise = (ex: Exercise) => {
       const exists = selectedExercises.find(e => e.id === ex.id);
@@ -265,8 +336,78 @@ export default function WorkoutPage() {
           placeholder="Search exercises..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          className="mb-4 w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm text-white outline-none ring-1 ring-zinc-800 focus:ring-indigo-500"
+          className="mb-3 w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm text-white outline-none ring-1 ring-zinc-800 focus:ring-indigo-500"
         />
+
+        {/* Add Your Own Exercise */}
+        {!showAddCustom ? (
+          <button
+            onClick={() => setShowAddCustom(true)}
+            className="mb-4 flex w-full items-center gap-2 rounded-xl border border-dashed border-indigo-500/40 bg-indigo-950/20 px-4 py-3 text-sm text-indigo-400 hover:bg-indigo-950/40 transition"
+          >
+            <span>➕</span> Add Your Own Exercise
+          </button>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mb-4 rounded-xl bg-zinc-900 border border-indigo-500/30 p-4 space-y-3"
+          >
+            <h3 className="text-sm font-semibold text-white">New Exercise</h3>
+            <input
+              value={customName}
+              onChange={e => setCustomName(e.target.value)}
+              placeholder="Exercise name (e.g. Cable Flyes)"
+              className="w-full rounded-lg bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-indigo-500"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <select
+                value={customMuscle}
+                onChange={e => setCustomMuscle(e.target.value)}
+                className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 text-sm text-white outline-none"
+              >
+                <option value="chest">Chest</option>
+                <option value="back">Back</option>
+                <option value="shoulders">Shoulders</option>
+                <option value="biceps">Biceps</option>
+                <option value="triceps">Triceps</option>
+                <option value="quadriceps">Quads</option>
+                <option value="hamstrings">Hamstrings</option>
+                <option value="glutes">Glutes</option>
+                <option value="calves">Calves</option>
+                <option value="core">Core</option>
+                <option value="forearms">Forearms</option>
+                <option value="full-body">Full Body</option>
+              </select>
+              <select
+                value={customCategory}
+                onChange={e => setCustomCategory(e.target.value as any)}
+                className="flex-1 rounded-lg bg-zinc-800 px-3 py-2 text-sm text-white outline-none"
+              >
+                <option value="strength">Strength</option>
+                <option value="bodyweight">Bodyweight</option>
+                <option value="cardio">Cardio</option>
+                <option value="flexibility">Flexibility</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAddCustom(false)}
+                className="flex-1 rounded-lg bg-zinc-800 py-2 text-sm text-zinc-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addCustomExercise}
+                disabled={!customName.trim()}
+                className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white disabled:opacity-40"
+              >
+                Add
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Exercise List */}
         <div className="space-y-2 pb-24">
@@ -289,7 +430,7 @@ export default function WorkoutPage() {
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-medium text-white truncate">{ex.name}</h3>
                 <p className="text-[10px] text-zinc-500 capitalize">
-                  {ex.primaryMuscles.join(', ')} &middot; {ex.category}
+                  {(ex as any).primaryMuscles?.join(', ') ?? ex.primaryMuscle} &middot; {ex.category}
                 </p>
               </div>
             </motion.button>
