@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Checklist } from '@/components/checklist';
+import BackButton from '@/components/ui/BackButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 
@@ -54,6 +55,11 @@ export default function ChecklistPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Back Button */}
+      <div className="max-w-md mx-auto px-4 pt-4">
+        <BackButton href="/dashboard" />
+      </div>
 
       {/* Main Content */}
       <Checklist userId={userId} onXPAwarded={handleXPAwarded} />

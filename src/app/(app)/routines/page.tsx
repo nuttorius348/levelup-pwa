@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import BackButton from '@/components/ui/BackButton';
 
 interface RoutineItem {
   id: string;
@@ -96,6 +97,7 @@ export default function RoutinesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
+      <BackButton href="/dashboard" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">

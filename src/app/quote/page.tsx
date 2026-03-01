@@ -16,6 +16,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import BackButton from '@/components/ui/BackButton';
 import { QuoteCard } from '@/components/quote';
 import type { QuoteTheme, QuoteTone } from '@/types/ai';
 
@@ -79,6 +80,7 @@ export default function QuotePage() {
       {/* Header */}
       <div className="px-4 pt-safe-top pb-4">
         <div className="max-w-md mx-auto">
+          <BackButton href="/dashboard" />
           <h1 className="text-2xl font-bold mb-1">Daily Quote</h1>
           <p className="text-sm text-white/40">
             Original motivational wisdom, every day

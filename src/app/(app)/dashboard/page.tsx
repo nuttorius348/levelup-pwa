@@ -72,6 +72,7 @@ export default async function DashboardPage() {
         <h2 className="text-lg font-semibold">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-3">
           {[
+            { href: '/checklist', icon: '📝', label: 'My Tasks', color: 'from-teal-500/20' },
             { href: '/routines', icon: '✅', label: 'Check Routines', color: 'from-blue-500/20' },
             { href: '/workout', icon: '🏋️', label: 'Log Workout', color: 'from-green-500/20' },
             { href: '/stretch', icon: '🧘', label: 'Morning Stretch', color: 'from-purple-500/20' },

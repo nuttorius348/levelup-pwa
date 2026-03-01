@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import BackButton from '@/components/ui/BackButton';
 import StretchSession from '@/components/stretch/StretchSession';
 
 export default function StretchPage() {
@@ -21,5 +22,10 @@ export default function StretchPage() {
     );
   }
 
-  return <StretchSession userId={userId} />;
+  return (
+    <div>
+      <BackButton href="/dashboard" />
+      <StretchSession userId={userId} />
+    </div>
+  );
 }

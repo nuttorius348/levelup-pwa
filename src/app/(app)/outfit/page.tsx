@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import BackButton from '@/components/ui/BackButton';
 import OutfitUpload from '@/components/outfit/OutfitUpload';
 import OutfitResults from '@/components/outfit/OutfitResults';
 import type { OutfitRatingResult, AIProviderName } from '@/types/ai';
@@ -64,6 +65,7 @@ export default function OutfitPage() {
 
   return (
     <div className="space-y-6">
+      <BackButton href="/dashboard" />
       <div>
         <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-violet-400 bg-clip-text text-transparent">
           Outfit Rater

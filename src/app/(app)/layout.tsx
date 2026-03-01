@@ -65,9 +65,9 @@ export default async function AppLayout({
       <nav className="bottom-nav sticky bottom-0 z-50 bg-slate-950/90 backdrop-blur-xl border-t border-white/5">
         <div className="flex items-center justify-around py-2">
           <NavItem href="/dashboard" icon="🏠" label="Home" />
+          <NavItem href="/checklist" icon="📝" label="Tasks" />
           <NavItem href="/routines" icon="✅" label="Routines" />
           <NavItem href="/workout" icon="💪" label="Workout" />
-          <NavItem href="/stretch" icon="🧘" label="Stretch" />
           <NavItem href="/outfit" icon="👔" label="Outfit" />
           <NavItem href="/shop" icon="🛍️" label="Shop" />
         </div>

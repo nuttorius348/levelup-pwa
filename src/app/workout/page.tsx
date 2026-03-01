@@ -4,8 +4,10 @@
 // Workout Demo Page — Start & track a workout
 // =============================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import WorkoutSessionView from '@/components/workout/WorkoutSession';
 import ExerciseCard from '@/components/workout/ExerciseCard';
 import OverloadTracker from '@/components/workout/OverloadTracker';
@@ -84,7 +86,9 @@ type PageState =
   | { view: 'browse' }
   | { view: 'custom'; selectedExercises: Exercise[] }
   | { view: 'session'; session: WorkoutSession }
-  | { view: 'results'; session: WorkoutSession; xp: WorkoutXPBreakdown; prs: PersonalRecord[] };
+  | { view: 'results'; session: WorkoutSession; xp: WorkoutXPBreakdown; prs: PersonalRecord[] }
+  | { view: 'history' }
+  | { view: 'exercise-detail'; exercise: Exercise };
 
 // ── Demo Page ─────────────────────────────────────────────────
 
@@ -234,6 +238,24 @@ export default function WorkoutPage() {
         xp={state.xp}
         prs={state.prs}
         onDone={() => setState({ view: 'home' })}
+      />
+    );
+  }
+
+  if (state.view === 'history') {
+    return (
+      <WorkoutHistory
+        onBack={() => setState({ view: 'home' })}
+        onViewExercise={(ex) => setState({ view: 'exercise-detail', exercise: ex })}
+      />
+    );
+  }
+
+  if (state.view === 'exercise-detail') {
+    return (
+      <ExerciseProgress
+        exercise={state.exercise}
+        onBack={() => setState({ view: 'history' })}
       />
     );
   }
@@ -459,7 +481,11 @@ export default function WorkoutPage() {
 
   return (
     <div className="min-h-screen bg-black px-4 pb-20 pt-12 text-white">
-      {/* Header */}
+      {/* Back + Header */}
+      <Link href="/dashboard" className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors mb-3">
+        <span className="text-lg leading-none">‹</span>
+        <span>Back</span>
+      </Link>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -528,6 +554,297 @@ export default function WorkoutPage() {
           exercises)
         </button>
       </div>
+
+      {/* Past Workouts / History */}
+      <div className="mt-4">
+        <button
+          onClick={() => setState({ view: 'history' })}
+          className="flex w-full items-center gap-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-left active:bg-emerald-950/40"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600/20 text-2xl">
+            📊
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-white">Past Workouts</h3>
+            <p className="text-xs text-zinc-400">Review progress & track improvements</p>
+          </div>
+          <span className="text-emerald-400 text-sm">&rarr;</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Workout History Screen ────────────────────────────────────
+
+interface HistoryEntry {
+  id: string;
+  title: string;
+  difficulty: string;
+  durationMinutes: number;
+  totalVolume: number;
+  exerciseCount: number;
+  xpEarned: number;
+  completedAt: string;
+}
+
+function WorkoutHistory({
+  onBack,
+  onViewExercise,
+}: {
+  onBack: () => void;
+  onViewExercise: (ex: Exercise) => void;
+}) {
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'history' | 'exercises'>('history');
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const res = await fetch(`/api/workout/history?userId=${user.id}&limit=50`);
+        if (res.ok) {
+          const data = await res.json();
+          setHistory(data.history ?? []);
+        }
+      } catch { /* silent */ }
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-black px-4 pb-20 pt-12 text-white">
+      <button onClick={onBack} className="mb-4 text-sm text-indigo-400">
+        &larr; Back
+      </button>
+      <h1 className="mb-1 text-2xl font-bold">Workout History</h1>
+      <p className="mb-4 text-xs text-zinc-400">Review past sessions and track improvements</p>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setTab('history')}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+            tab === 'history' ? 'bg-indigo-600 text-white' : 'bg-zinc-900 text-zinc-400'
+          }`}
+        >
+          📅 Past Workouts
+        </button>
+        <button
+          onClick={() => setTab('exercises')}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+            tab === 'exercises' ? 'bg-indigo-600 text-white' : 'bg-zinc-900 text-zinc-400'
+          }`}
+        >
+          💪 By Exercise
+        </button>
+      </div>
+
+      {tab === 'history' && (
+        <>
+          {loading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="h-20 rounded-xl bg-zinc-900 animate-pulse" />)}
+            </div>
+          ) : history.length === 0 ? (
+            <div className="text-center py-16 text-zinc-500">
+              <div className="text-5xl mb-3">🏋️</div>
+              <p className="font-medium">No workouts yet</p>
+              <p className="text-sm mt-1">Complete a workout to see it here!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {history.map((entry, i) => {
+                const date = new Date(entry.completedAt);
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+                return (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-white">{entry.title}</h3>
+                      <span className="text-xs text-zinc-500">{dateStr} · {timeStr}</span>
+                    </div>
+                    <div className="flex gap-3 text-xs text-zinc-400">
+                      <span>⏱ {entry.durationMinutes} min</span>
+                      <span>🏋️ {entry.exerciseCount} exercises</span>
+                      {entry.totalVolume > 0 && <span>📊 {entry.totalVolume.toLocaleString()} lbs</span>}
+                      <span className="text-indigo-400 ml-auto">+{entry.xpEarned} XP</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'exercises' && (
+        <div className="space-y-2">
+          <p className="text-xs text-zinc-500 mb-3">Tap an exercise to see your progress over time</p>
+          {EXERCISE_LIBRARY.map(ex => (
+            <motion.button
+              key={ex.id}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onViewExercise(ex)}
+              className="flex w-full items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 text-left hover:border-indigo-500/30 transition"
+            >
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-white truncate">{ex.name}</h3>
+                <p className="text-[10px] text-zinc-500 capitalize">{ex.primaryMuscle} · {ex.category}</p>
+              </div>
+              <span className="text-zinc-600 text-sm">→</span>
+            </motion.button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Exercise Progress Detail Screen ───────────────────────────
+
+interface OverloadEntry {
+  date: string;
+  maxWeight: number;
+  maxReps: number;
+  totalSets: number;
+  totalVolume: number;
+}
+
+function ExerciseProgress({
+  exercise,
+  onBack,
+}: {
+  exercise: Exercise;
+  onBack: () => void;
+}) {
+  const [entries, setEntries] = useState<OverloadEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const res = await fetch(`/api/workout/overload?userId=${user.id}&exerciseId=${exercise.id}&limit=30`);
+        if (res.ok) {
+          const data = await res.json();
+          setEntries(data.history ?? []);
+        }
+      } catch { /* silent */ }
+      setLoading(false);
+    }
+    load();
+  }, [exercise.id]);
+
+  // Calculate improvement stats
+  const first = entries[entries.length - 1];
+  const last = entries[0];
+  const weightImproved = first && last ? last.maxWeight - first.maxWeight : 0;
+  const repsImproved = first && last ? last.maxReps - first.maxReps : 0;
+  const volumeImproved = first && last ? last.totalVolume - first.totalVolume : 0;
+
+  return (
+    <div className="min-h-screen bg-black px-4 pb-20 pt-12 text-white">
+      <button onClick={onBack} className="mb-4 text-sm text-indigo-400">
+        &larr; Back to History
+      </button>
+
+      <h1 className="mb-1 text-xl font-bold">{exercise.name}</h1>
+      <p className="mb-4 text-xs text-zinc-400 capitalize">{exercise.primaryMuscle} · {exercise.category}</p>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-zinc-900 animate-pulse" />)}
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="text-center py-16 text-zinc-500">
+          <div className="text-5xl mb-3">📊</div>
+          <p className="font-medium">No data yet for {exercise.name}</p>
+          <p className="text-sm mt-1">Complete a workout with this exercise to track progress!</p>
+        </div>
+      ) : (
+        <>
+          {/* Improvement Summary */}
+          {entries.length >= 2 && (
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 text-center">
+                <p className="text-[10px] text-zinc-500 uppercase">Weight</p>
+                <p className={`text-lg font-bold ${weightImproved > 0 ? 'text-green-400' : weightImproved < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                  {weightImproved > 0 ? '+' : ''}{weightImproved} lbs
+                </p>
+              </div>
+              <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 text-center">
+                <p className="text-[10px] text-zinc-500 uppercase">Reps</p>
+                <p className={`text-lg font-bold ${repsImproved > 0 ? 'text-green-400' : repsImproved < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                  {repsImproved > 0 ? '+' : ''}{repsImproved}
+                </p>
+              </div>
+              <div className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3 text-center">
+                <p className="text-[10px] text-zinc-500 uppercase">Volume</p>
+                <p className={`text-lg font-bold ${volumeImproved > 0 ? 'text-green-400' : volumeImproved < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                  {volumeImproved > 0 ? '+' : ''}{volumeImproved.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Progress Chart (simple bar visualization) */}
+          <h3 className="text-sm font-semibold text-zinc-400 mb-3">Session History</h3>
+          <div className="space-y-2">
+            {entries.map((entry, i) => {
+              const maxVol = Math.max(...entries.map(e => e.totalVolume), 1);
+              const pct = Math.round((entry.totalVolume / maxVol) * 100);
+              const date = new Date(entry.date);
+              const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="rounded-xl bg-zinc-900/60 border border-zinc-800 p-3"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-zinc-500">{dateStr}</span>
+                    <div className="flex gap-3 text-xs">
+                      <span className="text-zinc-400">{entry.maxWeight} lbs × {entry.maxReps} reps</span>
+                      <span className="text-zinc-500">{entry.totalSets} sets</span>
+                    </div>
+                  </div>
+                  {/* Volume bar */}
+                  <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.5, delay: i * 0.05 }}
+                      className={`h-full rounded-full ${
+                        i === 0 ? 'bg-indigo-500' : 'bg-zinc-600'
+                      }`}
+                    />
+                  </div>
+                  <div className="text-right mt-1">
+                    <span className="text-[10px] text-zinc-500">{entry.totalVolume.toLocaleString()} lbs volume</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

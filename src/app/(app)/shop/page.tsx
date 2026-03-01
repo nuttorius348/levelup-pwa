@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import BackButton from '@/components/ui/BackButton';
 import ShopItemCard from '@/components/shop/ShopItemCard';
 import PurchaseModal from '@/components/shop/PurchaseModal';
 import type { UserInventoryItem, ShopCategory } from '@/types/shop';
@@ -80,6 +81,7 @@ export default function ShopPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
+      <BackButton href="/dashboard" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
