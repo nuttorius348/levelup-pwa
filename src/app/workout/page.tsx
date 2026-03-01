@@ -82,6 +82,7 @@ const PRESET_WORKOUTS = [
 type PageState =
   | { view: 'home' }
   | { view: 'browse' }
+  | { view: 'custom'; selectedExercises: Exercise[] }
   | { view: 'session'; session: WorkoutSession }
   | { view: 'results'; session: WorkoutSession; xp: WorkoutXPBreakdown; prs: PersonalRecord[] };
 
@@ -90,6 +91,7 @@ type PageState =
 export default function WorkoutPage() {
   const [state, setState] = useState<PageState>({ view: 'home' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [customDifficulty, setCustomDifficulty] = useState<WorkoutDifficulty>('intermediate');
 
   // ── Start a preset workout ──────────────────────────────────
 
@@ -106,6 +108,27 @@ export default function WorkoutPage() {
         title: preset.title,
         difficulty: preset.difficulty,
         exercises,
+      });
+      setState({ view: 'session', session });
+    },
+    [],
+  );
+
+  // ── Start a custom workout ───────────────────────────────────
+
+  const startCustom = useCallback(
+    (exercises: Exercise[], difficulty: WorkoutDifficulty) => {
+      const scaling = DIFFICULTY_SCALING[difficulty];
+      const builtExercises = WorkoutService.buildExerciseList(
+        exercises.map(e => e.id),
+        difficulty,
+        scaling,
+      );
+      const session = WorkoutService.createSession({
+        userId: 'demo-user',
+        title: 'Custom Workout',
+        difficulty,
+        exercises: builtExercises,
       });
       setState({ view: 'session', session });
     },
@@ -187,6 +210,110 @@ export default function WorkoutPage() {
     );
   }
 
+  // ── Custom Builder View ─────────────────────────────────────
+
+  if (state.view === 'custom') {
+    const { selectedExercises } = state;
+    const filtered = searchQuery
+      ? searchExercises(searchQuery)
+      : EXERCISE_LIBRARY;
+
+    const toggleExercise = (ex: Exercise) => {
+      const exists = selectedExercises.find(e => e.id === ex.id);
+      const updated = exists
+        ? selectedExercises.filter(e => e.id !== ex.id)
+        : [...selectedExercises, ex];
+      setState({ view: 'custom', selectedExercises: updated });
+    };
+
+    const isSelected = (id: string) => selectedExercises.some(e => e.id === id);
+
+    return (
+      <div className="min-h-screen bg-black px-4 pb-20 pt-12 text-white">
+        <button
+          onClick={() => setState({ view: 'home' })}
+          className="mb-4 text-sm text-indigo-400"
+        >
+          &larr; Back
+        </button>
+
+        <h1 className="mb-1 text-2xl font-bold">Build Custom Workout</h1>
+        <p className="mb-4 text-xs text-zinc-400">
+          Tap exercises to add/remove ({selectedExercises.length} selected)
+        </p>
+
+        {/* Difficulty Selector */}
+        <div className="mb-4 flex gap-2">
+          {(['beginner', 'intermediate', 'advanced'] as WorkoutDifficulty[]).map(d => (
+            <button
+              key={d}
+              onClick={() => setCustomDifficulty(d)}
+              className={`flex-1 rounded-xl py-2 text-xs font-medium capitalize transition ${
+                customDifficulty === d
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-900 text-zinc-400 ring-1 ring-zinc-800'
+              }`}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search exercises..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="mb-4 w-full rounded-xl bg-zinc-900 px-4 py-3 text-sm text-white outline-none ring-1 ring-zinc-800 focus:ring-indigo-500"
+        />
+
+        {/* Exercise List */}
+        <div className="space-y-2 pb-24">
+          {filtered.map(ex => (
+            <motion.button
+              key={ex.id}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => toggleExercise(ex)}
+              className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition ${
+                isSelected(ex.id)
+                  ? 'bg-indigo-600/20 ring-1 ring-indigo-500'
+                  : 'bg-zinc-900/60 ring-1 ring-zinc-800'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center ${
+                isSelected(ex.id) ? 'bg-indigo-500 border-indigo-500' : 'border-zinc-600'
+              }`}>
+                {isSelected(ex.id) && <span className="text-white text-xs">&#10003;</span>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-white truncate">{ex.name}</h3>
+                <p className="text-[10px] text-zinc-500 capitalize">
+                  {ex.primaryMuscles.join(', ')} &middot; {ex.category}
+                </p>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Start Button (fixed bottom) */}
+        {selectedExercises.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/95 to-transparent">
+            <motion.button
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => startCustom(selectedExercises, customDifficulty)}
+              className="w-full rounded-xl bg-indigo-600 py-3.5 text-center text-base font-semibold text-white active:bg-indigo-700"
+            >
+              Start Workout ({selectedExercises.length} exercises)
+            </motion.button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── Home View ───────────────────────────────────────────────
 
   return (
@@ -233,8 +360,25 @@ export default function WorkoutPage() {
         </div>
       </div>
 
+      {/* Custom Workout */}
+      <div className="mt-6">
+        <button
+          onClick={() => setState({ view: 'custom', selectedExercises: [] })}
+          className="flex w-full items-center gap-4 rounded-2xl border border-indigo-500/30 bg-indigo-950/20 p-4 text-left active:bg-indigo-950/40"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600/20 text-2xl">
+            🛠️
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-white">Custom Workout</h3>
+            <p className="text-xs text-zinc-400">Pick your own exercises</p>
+          </div>
+          <span className="text-indigo-400 text-sm">&rarr;</span>
+        </button>
+      </div>
+
       {/* Browse */}
-      <div className="mt-8">
+      <div className="mt-4">
         <button
           onClick={() => setState({ view: 'browse' })}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-700 py-4 text-sm font-medium text-zinc-400 active:bg-zinc-900"

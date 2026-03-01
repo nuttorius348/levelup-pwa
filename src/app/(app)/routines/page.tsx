@@ -142,7 +142,17 @@ export default function RoutinesPage() {
                       <span className="text-2xl">{routine.icon}</span>
                       <div>
                         <h3 className="font-semibold text-white">{routine.title}</h3>
-                        <p className="text-xs text-slate-400">{done}/{total} done</p>
+                        <p className="text-xs text-slate-400">
+                          {done}/{total} done
+                          <span className="ml-2 text-slate-500">
+                            {routine.recurrence?.type === 'daily' ? '(Daily)' :
+                             routine.recurrence?.type === 'weekdays' ? '(Weekdays)' :
+                             routine.recurrence?.type === 'weekends' ? '(Weekends)' :
+                             routine.recurrence?.type === 'custom' && routine.recurrence?.days ?
+                               `(${routine.recurrence.days.map((d: number) => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')})` :
+                             ''}
+                          </span>
+                        </p>
                       </div>
                     </div>
                     {pct === 100 && (
@@ -250,9 +260,17 @@ function CreateRoutineModal({ onClose, onCreated }: { onClose: () => void; onCre
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState('📋');
   const [color, setColor] = useState('#4C6EF5');
+  const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekdays' | 'weekends' | 'custom'>('daily');
+  const [customDays, setCustomDays] = useState<number[]>([]);
   const [items, setItems] = useState<string[]>(['']);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const toggleDay = (day: number) => {
+    setCustomDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort());
+  };
 
   const addItem = () => setItems(prev => [...prev, '']);
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
@@ -273,7 +291,9 @@ function CreateRoutineModal({ onClose, onCreated }: { onClose: () => void; onCre
           title: title.trim(),
           icon,
           color,
-          recurrence: { type: 'daily' },
+          recurrence: recurrenceType === 'custom'
+            ? { type: 'custom', days: customDays }
+            : { type: recurrenceType },
           items: validItems.map(t => ({ title: t.trim() })),
         }),
       });
@@ -347,6 +367,49 @@ function CreateRoutineModal({ onClose, onCreated }: { onClose: () => void; onCre
               />
             ))}
           </div>
+        </div>
+
+        {/* Recurrence */}
+        <div>
+          <label className="text-xs text-slate-400 mb-1 block">Repeat</label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { key: 'daily' as const, label: 'Every Day', icon: '📅' },
+              { key: 'weekdays' as const, label: 'Weekdays', icon: '💼' },
+              { key: 'weekends' as const, label: 'Weekends', icon: '🌴' },
+              { key: 'custom' as const, label: 'Custom', icon: '⚙️' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setRecurrenceType(opt.key)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition ${
+                  recurrenceType === opt.key
+                    ? 'bg-violet-600/30 ring-1 ring-violet-500 text-white'
+                    : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                }`}
+              >
+                <span>{opt.icon}</span>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {recurrenceType === 'custom' && (
+            <div className="flex gap-1.5 mt-2">
+              {DAY_LABELS.map((label, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => toggleDay(idx)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition ${
+                    customDays.includes(idx)
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Tasks */}

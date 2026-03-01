@@ -42,6 +42,7 @@ export default async function AppLayout({
               <span className="text-xs">🔥 {profile?.streak_days}</span>
             )}
             <span className="text-xs text-coin font-semibold">🪙 {profile?.coins ?? 0}</span>
+            <Link href="/settings" className="text-sm hover:opacity-80 transition">🔔</Link>
           </div>
         </div>
         {/* XP Progress Bar */}

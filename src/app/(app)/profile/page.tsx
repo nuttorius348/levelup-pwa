@@ -58,7 +58,7 @@ export default async function ProfilePage() {
       </div>
 
       {/* Settings link */}
-      <a href="/profile/settings" className="glass p-4 flex items-center justify-between tap-scale block">
+      <a href="/settings" className="glass p-4 flex items-center justify-between tap-scale">
         <span>⚙️ Settings</span>
         <span className="text-gray-500">→</span>
       </a>
