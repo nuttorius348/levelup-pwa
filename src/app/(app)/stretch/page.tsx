@@ -1,16 +1,25 @@
-// =============================================================
-// Morning Stretch Page — Guided stretch tutorials
-// =============================================================
+'use client';
+
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import StretchSession from '@/components/stretch/StretchSession';
 
 export default function StretchPage() {
-  return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Morning Stretch 🧘</h1>
-      <p className="text-gray-400">Start your day right with guided stretches</p>
-      {/* TODO: Implement StretchRoutine + Timer */}
-      <div className="glass p-6 text-center text-gray-500">
-        Stretch tutorials coming soon
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id);
+    });
+  }, []);
+
+  if (!userId) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-pulse text-slate-400">Loading stretches...</div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <StretchSession userId={userId} />;
 }

@@ -2,8 +2,10 @@
 // App Layout — Authenticated shell with bottom nav + XP bar
 // =============================================================
 
+import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { xpForNextLevel, levelFromTotalXP } from '@/lib/xp/levels';
 
 export default async function AppLayout({
   children,
@@ -47,7 +49,7 @@ export default async function AppLayout({
           <div className="xp-bar">
             <div
               className="xp-bar-fill"
-              style={{ width: `${Math.min(100, ((profile?.current_level_xp ?? 0) / Math.max(1, 1)) * 100)}%` }}
+              style={{ width: `${Math.min(100, ((profile?.current_level_xp ?? 0) / Math.max(1, xpForNextLevel(profile?.level ?? 1))) * 100)}%` }}
             />
           </div>
         </div>
@@ -63,9 +65,10 @@ export default async function AppLayout({
         <div className="flex items-center justify-around py-2">
           <NavItem href="/dashboard" icon="🏠" label="Home" />
           <NavItem href="/routines" icon="✅" label="Routines" />
-          <NavItem href="/workouts" icon="💪" label="Workouts" />
+          <NavItem href="/workout" icon="💪" label="Workout" />
+          <NavItem href="/stretch" icon="🧘" label="Stretch" />
           <NavItem href="/outfit" icon="👔" label="Outfit" />
-          <NavItem href="/profile" icon="👤" label="Profile" />
+          <NavItem href="/shop" icon="🛍️" label="Shop" />
         </div>
       </nav>
     </div>
@@ -74,12 +77,12 @@ export default async function AppLayout({
 
 function NavItem({ href, icon, label }: { href: string; icon: string; label: string }) {
   return (
-    <a
+    <Link
       href={href}
       className="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white transition-colors"
     >
       <span className="text-xl">{icon}</span>
       <span className="text-[10px] font-medium">{label}</span>
-    </a>
+    </Link>
   );
 }

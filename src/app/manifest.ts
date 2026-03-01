@@ -101,14 +101,26 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: 'Log Workout',
         short_name: 'Workout',
-        url: '/workouts/log',
+        url: '/workout',
         icons: [{ src: '/icons/shortcut-workout.png', sizes: '96x96' }],
+      },
+      {
+        name: 'Morning Stretch',
+        short_name: 'Stretch',
+        url: '/stretch',
+        icons: [{ src: '/icons/shortcut-routines.png', sizes: '96x96' }],
       },
       {
         name: 'Rate Outfit',
         short_name: 'Outfit',
         url: '/outfit',
         icons: [{ src: '/icons/shortcut-outfit.png', sizes: '96x96' }],
+      },
+      {
+        name: 'Daily Quote',
+        short_name: 'Quote',
+        url: '/quote',
+        icons: [{ src: '/icons/shortcut-routines.png', sizes: '96x96' }],
       },
     ],
     // iOS-specific PWA meta handled in layout.tsx via <meta> tags

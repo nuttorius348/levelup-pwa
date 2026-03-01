@@ -2,6 +2,7 @@
 // Dashboard — Home page with daily overview
 // =============================================================
 
+import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getLevelInfo } from '@/lib/xp/levels';
 
@@ -72,20 +73,20 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 gap-3">
           {[
             { href: '/routines', icon: '✅', label: 'Check Routines', color: 'from-blue-500/20' },
-            { href: '/workouts/log', icon: '🏋️', label: 'Log Workout', color: 'from-green-500/20' },
+            { href: '/workout', icon: '🏋️', label: 'Log Workout', color: 'from-green-500/20' },
             { href: '/stretch', icon: '🧘', label: 'Morning Stretch', color: 'from-purple-500/20' },
             { href: '/outfit', icon: '👔', label: 'Rate Outfit', color: 'from-pink-500/20' },
-            { href: '/quotes', icon: '💬', label: 'Get Motivated', color: 'from-orange-500/20' },
+            { href: '/quote', icon: '💬', label: 'Get Motivated', color: 'from-orange-500/20' },
             { href: '/shop', icon: '🛍️', label: 'Shop', color: 'from-yellow-500/20' },
           ].map((action) => (
-            <a
+            <Link
               key={action.href}
               href={action.href}
               className={`glass p-4 tap-scale bg-gradient-to-br ${action.color} to-transparent`}
             >
               <span className="text-2xl">{action.icon}</span>
               <div className="text-sm font-medium mt-1">{action.label}</div>
-            </a>
+            </Link>
           ))}
         </div>
       </div>
