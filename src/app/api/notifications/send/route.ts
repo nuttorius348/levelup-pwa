@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/notifications/send — Trigger push notification
 // Protected by CRON_SECRET for cron jobs, or admin auth

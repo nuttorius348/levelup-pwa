@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/ai/coach
 // AI workout/routine coaching endpoint

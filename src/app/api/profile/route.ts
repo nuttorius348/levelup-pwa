@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // GET /api/profile — Get user profile (coins, level, XP, etc.)
 // =============================================================

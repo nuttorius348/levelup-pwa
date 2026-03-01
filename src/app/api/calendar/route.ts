@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: GET /api/calendar — Get calendar events for a month
 // =============================================================

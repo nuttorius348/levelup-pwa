@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { WorkoutService } from '@/lib/services/workout.service';
 import { XPService } from '@/lib/services/xp.service';

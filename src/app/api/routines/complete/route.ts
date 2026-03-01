@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/routines/complete — Mark a routine item done
 // =============================================================

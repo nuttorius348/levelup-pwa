@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { claimQuestReward } from '@/lib/quests/quest.service';
 import { grantXP } from '@/lib/xp/engine';

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // POST /api/shop/activate-boost — Activate a purchased boost
 // =============================================================

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/ai/quote/read
 // Mark daily quote as read and award XP

@@ -1,6 +1,8 @@
-﻿// =============================================================
-// POST /api/shop/daily-login â€” Claim daily login reward
-// GET  /api/shop/daily-login â€” Get login calendar state
+export const dynamic = 'force-dynamic';
+
+// =============================================================
+// POST /api/shop/daily-login — Claim daily login reward
+// GET  /api/shop/daily-login — Get login calendar state
 // =============================================================
 
 import { NextResponse } from 'next/server';

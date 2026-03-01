@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/ai/outfit-rate
 // Analyze an outfit image using the Unified AI Service

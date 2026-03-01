@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/ai/quote
 // Generate an original, copyright-safe motivational quote

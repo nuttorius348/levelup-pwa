@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/xp/grant — Server-validated XP grant
 // =============================================================

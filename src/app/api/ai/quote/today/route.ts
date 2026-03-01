@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: GET /api/ai/quote/today
 // Returns today's daily motivational quote (cached)

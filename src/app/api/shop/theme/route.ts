@@ -1,6 +1,8 @@
-﻿// =============================================================
-// POST /api/shop/theme â€” Set the active theme
-// GET  /api/shop/theme â€” Get current theme
+export const dynamic = 'force-dynamic';
+
+// =============================================================
+// POST /api/shop/theme — Set the active theme
+// GET  /api/shop/theme — Get current theme
 // =============================================================
 
 import { NextResponse } from 'next/server';

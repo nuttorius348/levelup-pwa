@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // POST /api/stretch/complete — Save a completed stretch session
 // =============================================================

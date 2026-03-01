@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // POST /api/shop/equip — Equip or unequip a cosmetic item
 // =============================================================

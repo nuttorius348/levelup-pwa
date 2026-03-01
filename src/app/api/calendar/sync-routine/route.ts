@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { syncRoutineToCalendar, syncWeeklyRoutines } from '@/lib/services/calendar-sync.service';
 

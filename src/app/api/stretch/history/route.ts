@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // GET /api/stretch/history — Fetch stretch session history
 // =============================================================

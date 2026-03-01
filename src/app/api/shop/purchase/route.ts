@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/shop/purchase — Buy an item with coins
 // =============================================================

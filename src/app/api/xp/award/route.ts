@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { awardXP } from '@/lib/services/xp.service';
 import { sendLevelUpNotification, sendXPMilestoneNotification } from '@/lib/notifications/helpers';

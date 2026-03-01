@@ -1,3 +1,5 @@
+'use client';
+
 import { QuestList } from '@/components/quests/QuestList';
 
 export default function QuestsPage() {

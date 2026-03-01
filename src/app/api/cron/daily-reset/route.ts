@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/cron/daily-reset
 // Runs daily via Vercel Cron — resets caps, updates streaks

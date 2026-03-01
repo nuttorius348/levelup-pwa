@@ -1,5 +1,7 @@
-﻿// =============================================================
-// GET /api/shop/comeback â€” Check & claim comeback bonus
+export const dynamic = 'force-dynamic';
+
+// =============================================================
+// GET /api/shop/comeback — Check & claim comeback bonus
 // =============================================================
 
 import { NextResponse } from 'next/server';

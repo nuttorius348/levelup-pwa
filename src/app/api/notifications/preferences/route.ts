@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: POST /api/notifications/preferences — Save per-user prefs
 // API: GET  /api/notifications/preferences — Load prefs

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // =============================================================
 // API: GET /api/ai/quote/widget
 // iPhone widget-ready endpoint (simplified JSON)
