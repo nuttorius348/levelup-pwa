@@ -1,27 +1,31 @@
-// Example page demonstrating the Checklist component
+// Checklist page
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Checklist } from '@/components/checklist';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ChecklistPage() {
+  const [userId, setUserId] = useState<string | null>(null);
   const [xpNotification, setXpNotification] = useState<{
     xp: number;
     coins: number;
   } | null>(null);
 
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id);
+    });
+  }, []);
+
   const handleXPAwarded = (xp: number, coins: number) => {
     setXpNotification({ xp, coins });
-    
-    // Auto-dismiss after 3 seconds
-    setTimeout(() => {
-      setXpNotification(null);
-    }, 3000);
+    setTimeout(() => setXpNotification(null), 3000);
   };
 
-  // In production, get userId from auth session
-  const userId = 'your-user-id'; // Replace with actual user ID
+  if (!userId) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
