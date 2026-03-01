@@ -44,14 +44,19 @@ class AIRouter {
   private taskMap: Map<AITaskType, TaskProviderMapping> = new Map();
 
   constructor() {
-    // Lazily register providers
-    this.providers.set('openai', new OpenAIAdapter());
-    this.providers.set('anthropic', new ClaudeAdapter());
-    this.providers.set('google', new GeminiAdapter());
-
     // Build task lookup
     for (const mapping of TASK_ROUTING) {
       this.taskMap.set(mapping.task, mapping);
+    }
+  }
+
+  /** Lazily create and cache a provider instance. */
+  private createProvider(name: AIProviderName): AIProviderInterface {
+    switch (name) {
+      case 'openai': return new OpenAIAdapter();
+      case 'anthropic': return new ClaudeAdapter();
+      case 'google': return new GeminiAdapter();
+      default: throw new Error(`Unknown AI provider: ${name}`);
     }
   }
 
@@ -59,8 +64,11 @@ class AIRouter {
    * Get the provider instance for a given task.
    */
   private getProvider(name: AIProviderName): AIProviderInterface {
-    const provider = this.providers.get(name);
-    if (!provider) throw new Error(`AI provider "${name}" not registered`);
+    let provider = this.providers.get(name);
+    if (!provider) {
+      provider = this.createProvider(name);
+      this.providers.set(name, provider);
+    }
     return provider;
   }
 

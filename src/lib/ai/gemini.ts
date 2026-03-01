@@ -17,10 +17,15 @@ const SAFETY_SETTINGS = [
 
 export class GeminiAdapter implements AIProviderInterface {
   readonly name = 'google' as const;
-  private client: GoogleGenerativeAI;
+  private _client: GoogleGenerativeAI | null = null;
 
-  constructor() {
-    this.client = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+  private get client(): GoogleGenerativeAI {
+    if (!this._client) {
+      const key = process.env.GOOGLE_AI_API_KEY;
+      if (!key) throw new Error('GOOGLE_AI_API_KEY is not set');
+      this._client = new GoogleGenerativeAI(key);
+    }
+    return this._client;
   }
 
   async generateText(prompt: string, opts?: AIOptions): Promise<AITextResponse> {

@@ -10,10 +10,15 @@ const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
 
 export class ClaudeAdapter implements AIProviderInterface {
   readonly name = 'anthropic' as const;
-  private client: Anthropic;
+  private _client: Anthropic | null = null;
 
-  constructor() {
-    this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  private get client(): Anthropic {
+    if (!this._client) {
+      const key = process.env.ANTHROPIC_API_KEY;
+      if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
+      this._client = new Anthropic({ apiKey: key });
+    }
+    return this._client;
   }
 
   async generateText(prompt: string, opts?: AIOptions): Promise<AITextResponse> {
