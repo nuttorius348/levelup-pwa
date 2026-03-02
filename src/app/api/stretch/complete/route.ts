@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { StretchService } from '@/lib/services/stretch.service';
+import { grantXP } from '@/lib/xp/engine';
 import type { StretchSession } from '@/types/stretch';
 
 export async function POST(req: NextRequest) {
@@ -38,13 +39,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Return XP breakdown
+    // 2. Award XP via engine (stretch_complete action)
+    let xpResult: any = { grant: { finalXP: 0, coinsEarned: 0 }, levelUp: null };
+    try {
+      xpResult = await grantXP({
+        userId: session.userId,
+        action: 'stretch_complete',
+        metadata: {
+          sessionId: session.id,
+          routineId: session.routineId,
+          posesCompleted: session.posesCompleted,
+          durationSeconds: session.totalDurationSeconds,
+        },
+      });
+
+      // Morning bonus (before 9 AM)
+      if (session.xpBreakdown?.morningBonusXP > 0) {
+        await grantXP({
+          userId: session.userId,
+          action: 'stretch_morning_bonus',
+          metadata: { sessionId: session.id },
+        });
+      }
+    } catch (xpErr) {
+      console.error('[API /stretch/complete] XP grant error:', xpErr);
+      // Non-critical — session is already saved
+    }
+
+    // 3. Return XP breakdown
     return NextResponse.json({
       success: true,
-      xpAwarded: session.xpBreakdown.totalXP,
-      coinsAwarded: session.xpBreakdown.coinsEarned,
-      isMorning: session.xpBreakdown.morningBonusXP > 0,
+      xpAwarded: xpResult.grant.finalXP,
+      coinsAwarded: xpResult.grant.coinsEarned,
+      isMorning: session.xpBreakdown?.morningBonusXP > 0,
       breakdown: session.xpBreakdown,
+      levelUp: xpResult.levelUp ?? null,
     });
   } catch (err) {
     console.error('[API /stretch/complete] Error:', err);

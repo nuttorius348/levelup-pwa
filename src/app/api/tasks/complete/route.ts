@@ -2,12 +2,13 @@ export const dynamic = 'force-dynamic';
 
 // =============================================================
 // POST /api/tasks/complete — Mark a routine item or ad-hoc task done
-// Does NOT award XP — XP only awarded via /api/tasks/claim-daily
+// Awards XP immediately per task (routine_task action, 15 XP base)
 // =============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { grantXP } from '@/lib/xp/engine';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,10 +34,23 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (existing) {
-        return NextResponse.json({ completed: true, alreadyDone: true });
+        return NextResponse.json({ completed: true, alreadyDone: true, xp: 0 });
       }
 
-      // Record completion (no XP)
+      // Award XP for completing the task
+      let xpEarned = 0;
+      try {
+        const xpResult = await grantXP({
+          userId: user.id,
+          action: 'routine_task',
+          metadata: { routine_id: routineId, item_id: routineItemId, source: 'tasks_page' },
+        });
+        xpEarned = xpResult.grant.finalXP;
+      } catch (xpErr) {
+        console.error('[API] tasks/complete XP error:', xpErr);
+      }
+
+      // Record completion
       const { error: insertErr } = await admin
         .from('routine_completions')
         .insert({
@@ -44,7 +58,7 @@ export async function POST(request: NextRequest) {
           routine_id: routineId,
           routine_item_id: routineItemId,
           completed_date: today,
-          xp_earned: 0,
+          xp_earned: xpEarned,
         });
 
       if (insertErr) {
@@ -52,7 +66,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to record completion' }, { status: 500 });
       }
 
-      return NextResponse.json({ completed: true });
+      return NextResponse.json({ completed: true, xp: xpEarned });
     }
 
     if (type === 'adhoc' && taskId) {
@@ -71,7 +85,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to complete task' }, { status: 500 });
       }
 
-      return NextResponse.json({ completed: true });
+      // Award XP for ad-hoc task
+      let xpEarned = 0;
+      try {
+        const xpResult = await grantXP({
+          userId: user.id,
+          action: 'routine_task',
+          metadata: { task_id: taskId, source: 'adhoc_task' },
+        });
+        xpEarned = xpResult.grant.finalXP;
+      } catch (xpErr) {
+        console.error('[API] tasks/complete adhoc XP error:', xpErr);
+      }
+
+      return NextResponse.json({ completed: true, xp: xpEarned });
     }
 
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });

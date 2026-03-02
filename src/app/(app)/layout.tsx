@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { xpForNextLevel, levelFromTotalXP } from '@/lib/xp/levels';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export default async function AppLayout({
   children,
@@ -19,12 +20,66 @@ export default async function AppLayout({
     redirect('/login');
   }
 
-  // Fetch from users table (canonical source of truth for all stats)
-  const { data: profile } = await supabase
+  const admin = createAdminClient();
+
+  // Ensure users row exists (required for ALL XP operations)
+  let { data: profile } = await supabase
     .from('users')
-    .select('level, total_xp, current_level_xp, coins, streak_days, display_name, avatar_url')
+    .select('level, total_xp, current_level_xp, coins, streak_days, display_name, avatar_url, last_active_date')
     .eq('id', user.id)
     .single();
+
+  if (!profile) {
+    // First-time user — create both users and profiles rows
+    const newProfile = {
+      id: user.id,
+      display_name: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'User',
+      email: user.email ?? '',
+      avatar_url: user.user_metadata?.avatar_url ?? '👤',
+      level: 1,
+      total_xp: 0,
+      current_level_xp: 0,
+      coins: 0,
+      streak_days: 0,
+      longest_streak: 0,
+      last_active_date: new Date().toISOString().split('T')[0],
+    };
+    await admin.from('users').upsert(newProfile, { onConflict: 'id' });
+    await admin.from('profiles').upsert(newProfile, { onConflict: 'id' });
+
+    // Refetch
+    const { data: freshProfile } = await supabase
+      .from('users')
+      .select('level, total_xp, current_level_xp, coins, streak_days, display_name, avatar_url, last_active_date')
+      .eq('id', user.id)
+      .single();
+    profile = freshProfile;
+  }
+
+  // Grant daily_login XP + update streak (idempotent — capped at 1/day)
+  // Only do this once per day (check last_active_date)
+  const today = new Date().toISOString().split('T')[0];
+  if (profile && profile.last_active_date !== today) {
+    try {
+      // Import lazily to avoid circular deps in layout
+      const { grantXP } = await import('@/lib/xp/engine');
+      const { updateStreak } = await import('@/lib/services/xp.service');
+
+      await updateStreak(user.id);
+      await grantXP({ userId: user.id, action: 'daily_login', metadata: { source: 'app_visit' } });
+
+      // Refetch profile after grants
+      const { data: updated } = await supabase
+        .from('users')
+        .select('level, total_xp, current_level_xp, coins, streak_days, display_name, avatar_url, last_active_date')
+        .eq('id', user.id)
+        .single();
+      if (updated) profile = updated;
+    } catch (e) {
+      console.error('[Layout] Daily init error:', e);
+      // Non-critical — continue rendering
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

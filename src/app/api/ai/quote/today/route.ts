@@ -2,15 +2,15 @@ export const dynamic = 'force-dynamic';
 
 // =============================================================
 // API: GET /api/ai/quote/today
-// Returns today's daily motivational quote (cached)
+// Returns a motivational quote that rotates every 4 hours
 // =============================================================
 //
 // Flow:
 //  1. Check if today's quote exists in daily_quotes table
-//  2. If yes → return cached quote
-//  3. If no → generate new quote via AIService
-//  4. Save to daily_quotes
-//  5. Return fresh quote
+//  2. If cached AND less than 4 hours old → return cached
+//  3. If cached BUT older than 4 hours → generate new, UPDATE row
+//  4. If no row for today → generate new, INSERT row
+//  5. Return quote
 //
 // PUBLIC endpoint (no auth) — widgets can access this.
 // =============================================================
@@ -48,13 +48,17 @@ const THEMES: QuoteTheme[] = [
   'discipline-resilience',
 ];
 
-/** Pick a theme pseudo-randomly based on date (cycles every 3 days) */
-function getThemeForDate(date: Date): QuoteTheme {
+/** Pick a theme pseudo-randomly based on date + 4-hour slot */
+function getThemeForSlot(date: Date): QuoteTheme {
   const dayOfYear = Math.floor(
     (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000,
   );
-  return THEMES[dayOfYear % THEMES.length]!;
+  const slot = Math.floor(date.getUTCHours() / 4); // 0-5
+  return THEMES[(dayOfYear * 6 + slot) % THEMES.length]!;
 }
+
+/** How many ms remain until the current 4-hour window expires */
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
 // ── Route Handler ─────────────────────────────────────────────
 
@@ -92,6 +96,7 @@ export async function GET(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0]!; // YYYY-MM-DD
 
     // ── Check cache first ────────────────────────────────────
+    let existingRow: Record<string, unknown> | null = null;
     try {
       const { data: cached } = await supabase
         .from('daily_quotes')
@@ -100,29 +105,38 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (cached) {
-        return NextResponse.json({
-          quote: {
-            text: cached.quote_text,
-            theme: cached.theme,
-            tone: cached.tone,
-            attribution: cached.attribution,
-            tags: cached.tags,
-            followUp: cached.follow_up,
-          },
-          date: cached.quote_date,
-          stats: {
-            totalReads: cached.total_reads,
-            uniqueReaders: cached.unique_readers,
-          },
-          cached: true,
-        });
+        // Check if quote is still fresh (< 4 hours old)
+        const updatedAt = new Date(cached.updated_at ?? cached.created_at).getTime();
+        const age = Date.now() - updatedAt;
+
+        if (age < FOUR_HOURS_MS) {
+          // Still fresh — return cached
+          return NextResponse.json({
+            quote: {
+              text: cached.quote_text,
+              theme: cached.theme,
+              tone: cached.tone,
+              attribution: cached.attribution,
+              tags: cached.tags,
+              followUp: cached.follow_up,
+            },
+            date: cached.quote_date,
+            stats: {
+              totalReads: cached.total_reads,
+              uniqueReaders: cached.unique_readers,
+            },
+            cached: true,
+          });
+        }
+        // Stale — will regenerate and UPDATE below
+        existingRow = cached;
       }
     } catch {
       // Table may not exist — continue to generate
     }
 
     // ── Generate fresh quote ─────────────────────────────────
-    const theme = getThemeForDate(new Date());
+    const theme = getThemeForSlot(new Date());
     let quoteData: { text: string; theme: string; tone: string; attribution: string; tags: string[]; followUp?: string };
     let provider = 'fallback';
     let fallbackUsed = false;
@@ -163,22 +177,32 @@ export async function GET(request: NextRequest) {
     // ── Save to cache (using admin client to bypass RLS) ────
     try {
       const adminSupabase = createAdminClient();
-      await adminSupabase
-        .from('daily_quotes')
-        .insert({
-          quote_date: today,
-          quote_text: quoteData.text,
-          theme: quoteData.theme,
-          tone: quoteData.tone,
-          attribution: quoteData.attribution,
-          tags: quoteData.tags,
-          follow_up: quoteData.followUp ?? null,
-          ai_provider: provider,
-          fallback_used: fallbackUsed,
-          generation_latency_ms: latencyMs,
-        })
-        .select()
-        .single();
+      const quotePayload = {
+        quote_text: quoteData.text,
+        theme: quoteData.theme,
+        tone: quoteData.tone,
+        attribution: quoteData.attribution,
+        tags: quoteData.tags,
+        follow_up: quoteData.followUp ?? null,
+        ai_provider: provider,
+        fallback_used: fallbackUsed,
+        generation_latency_ms: latencyMs,
+      };
+
+      if (existingRow) {
+        // UPDATE the existing row for today (4-hour rotation)
+        await adminSupabase
+          .from('daily_quotes')
+          .update({ ...quotePayload, updated_at: new Date().toISOString() })
+          .eq('quote_date', today);
+      } else {
+        // INSERT new row for today
+        await adminSupabase
+          .from('daily_quotes')
+          .insert({ quote_date: today, ...quotePayload })
+          .select()
+          .single();
+      }
     } catch (saveErr) {
       console.error('[API] Failed to save daily quote:', saveErr);
     }

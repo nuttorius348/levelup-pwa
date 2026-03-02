@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
         // Streak continues — no action needed
         streaksUpdated++;
       } else {
-        // Streak broken
-        await admin
-          .from('profiles')
-          .update({ streak_days: 0 })
-          .eq('id', user.id);
+        // Streak broken — update BOTH profiles and users tables
+        await Promise.all([
+          admin.from('profiles').update({ streak_days: 0 }).eq('id', user.id),
+          admin.from('users').update({ streak_days: 0 }).eq('id', user.id),
+        ]);
         streaksBroken++;
       }
     }
