@@ -7,7 +7,6 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { activateBoost } from '@/lib/services/boost.service';
 
 export async function POST(request: Request) {
   try {
@@ -21,75 +20,106 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { rewardId } = await request.json();
+    const { itemId } = await request.json();
 
-    if (!rewardId) {
+    if (!itemId) {
       return NextResponse.json(
-        { error: 'Missing rewardId' },
-        { status: 400 }
+        { error: 'Missing itemId' },
+        { status: 400 },
       );
     }
 
-    // Check ownership
     const admin = createAdminClient();
-    const { data: ownership } = await admin
-      .from('user_rewards')
-      .select('id, rewards(category, effects)')
+
+    // Check ownership in user_inventory
+    const { data: inventoryItem } = await admin
+      .from('user_inventory')
+      .select('id, item_id')
       .eq('user_id', user.id)
-      .eq('reward_id', rewardId)
+      .eq('item_id', itemId)
       .single();
 
-    if (!ownership) {
+    if (!inventoryItem) {
       return NextResponse.json(
         { error: 'You do not own this item' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    const reward = (ownership.rewards as any);
-    const category = reward?.category;
-    const effects = reward?.effects;
+    // Get the shop item details
+    const { data: shopItem } = await admin
+      .from('shop_items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
 
-    if (category !== 'boost') {
+    if (!shopItem) {
+      return NextResponse.json(
+        { error: 'Item not found' },
+        { status: 404 },
+      );
+    }
+
+    if (shopItem.category !== 'boost') {
       return NextResponse.json(
         { error: 'This item is not a boost' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    if (!effects) {
-      return NextResponse.json(
-        { error: 'Boost has no effects defined' },
-        { status: 400 }
-      );
-    }
+    const metadata = shopItem.metadata as any;
+    const xpMultiplier = metadata?.xpMultiplier ?? 1.0;
+    const coinMultiplier = metadata?.coinMultiplier ?? 1.0;
+    const durationMinutes = metadata?.durationMinutes ?? 60;
 
-    // Activate boost
-    const activeBoost = await activateBoost(user.id, rewardId, effects);
+    // Activate the boost by inserting into active_boosts
+    const expiresAt = new Date(Date.now() + durationMinutes * 60_000).toISOString();
 
-    if (!activeBoost) {
+    const { data: boost, error: boostError } = await admin
+      .from('active_boosts')
+      .insert({
+        user_id: user.id,
+        boost_type: xpMultiplier > 1 ? 'xp' : coinMultiplier > 1 ? 'coin' : 'combo',
+        multiplier: Math.max(xpMultiplier, coinMultiplier),
+        expires_at: expiresAt,
+        source_item_id: itemId,
+      })
+      .select()
+      .single();
+
+    if (boostError) {
+      console.error('[API] activate-boost insert error:', boostError);
       return NextResponse.json(
         { error: 'Failed to activate boost' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    // Mark item as consumed (delete from user_rewards)
+    // Remove the item from inventory (consumed)
     await admin
-      .from('user_rewards')
+      .from('user_inventory')
       .delete()
-      .eq('id', ownership.id);
+      .eq('id', inventoryItem.id);
+
+    const labelParts: string[] = [];
+    if (xpMultiplier > 1) labelParts.push(`${xpMultiplier}x XP`);
+    if (coinMultiplier > 1) labelParts.push(`${coinMultiplier}x Coins`);
 
     return NextResponse.json({
       success: true,
-      boost: activeBoost,
-      message: `Boost activated! ${activeBoost.multiplier}x for ${activeBoost.minutesRemaining} minutes.`,
+      boost: {
+        id: boost?.id,
+        multiplier: Math.max(xpMultiplier, coinMultiplier),
+        minutesRemaining: durationMinutes,
+        expiresAt,
+      },
+      message: `Boost activated! ${labelParts.join(' + ')} for ${durationMinutes} minutes.`,
     });
   } catch (error) {
     console.error('[API] /shop/activate-boost error:', error);
     return NextResponse.json(
       { error: 'Failed to activate boost' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

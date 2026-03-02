@@ -1,17 +1,29 @@
 'use client';
 
 // =============================================================
-// Account Settings — Profile, avatar, username, delete account
+// Profile & Settings — Profile overview + account settings
 // =============================================================
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
 const AVATAR_OPTIONS = ['👤', '💪', '🧠', '🎯', '🔥', '⚡', '🏆', '🎨', '🦁', '🐺', '🦅', '🐉'];
 
-export default function SettingsPage() {
+interface ProfileData {
+  display_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  level: number;
+  total_xp: number;
+  current_level_xp: number;
+  coins: number;
+  streak_days: number;
+  longest_streak: number;
+}
+
+export default function ProfileSettingsPage() {
   const router = useRouter();
   const supabase = createClient();
 
@@ -22,6 +34,7 @@ export default function SettingsPage() {
   const [deleteText, setDeleteText] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -39,6 +52,7 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         const p = data.profile;
+        setProfile(p);
         setDisplayName(p?.display_name ?? '');
         setUsername(p?.username ?? '');
         if (p?.avatar_url) {
@@ -73,6 +87,11 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         setMessage({ type: 'success', text: 'Profile updated!' });
+        const profileRes = await fetch('/api/profile');
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          setProfile(profileData.profile);
+        }
       } else {
         setMessage({ type: 'error', text: data.error ?? 'Failed to update' });
       }
@@ -110,10 +129,13 @@ export default function SettingsPage() {
     }
   };
 
+  const avatarDisplay = avatarMode === 'emoji' ? selectedEmoji : (profile?.avatar_url || '👤');
+  const isEmojiAvatar = AVATAR_OPTIONS.includes(avatarDisplay);
+
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 rounded bg-white/5 animate-pulse" />
+      <div className="space-y-4 max-w-md mx-auto">
+        <div className="h-48 rounded-2xl bg-white/5 animate-pulse" />
         {[1,2,3].map(i => <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />)}
       </div>
     );
@@ -121,27 +143,102 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-8 max-w-md mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold">⚙️ Account Settings</h1>
-        <p className="text-slate-400 text-sm mt-1">Manage your profile and account</p>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* PROFILE CARD                                              */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative rounded-2xl overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 via-purple-600/20 to-pink-600/10" />
+        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
+
+        <div className="relative p-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-slate-800 border-4 border-indigo-500/50 mx-auto mb-3 flex items-center justify-center text-4xl shadow-xl shadow-indigo-500/20">
+            {isEmojiAvatar ? (
+              avatarDisplay
+            ) : profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              '👤'
+            )}
+          </div>
+
+          <h1 className="text-xl font-bold text-white">{profile?.display_name ?? 'User'}</h1>
+          {profile?.username && (
+            <p className="text-sm text-indigo-300">@{profile.username}</p>
+          )}
+
+          {/* XP Bar */}
+          <div className="mt-4 mb-2">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-indigo-300 font-medium">Level {profile?.level ?? 1}</span>
+              <span className="text-slate-400">{(profile?.total_xp ?? 0).toLocaleString()} total XP</span>
+            </div>
+            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, ((profile?.current_level_xp ?? 0) / Math.max(1, getXpForNextLevel(profile?.level ?? 1))) * 100)}%` }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500"
+              />
+            </div>
+          </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="bg-white/5 rounded-xl p-2.5 text-center">
+              <div className="text-lg font-bold text-white">{profile?.level ?? 1}</div>
+              <div className="text-[10px] text-slate-400 uppercase font-medium">Level</div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-2.5 text-center">
+              <div className="text-lg font-bold text-amber-400">🪙 {(profile?.coins ?? 0).toLocaleString()}</div>
+              <div className="text-[10px] text-slate-400 uppercase font-medium">Coins</div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-2.5 text-center">
+              <div className="text-lg font-bold text-orange-400">🔥 {profile?.streak_days ?? 0}</div>
+              <div className="text-[10px] text-slate-400 uppercase font-medium">Streak</div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 mt-3 text-xs text-slate-400">
+            <span>Best Streak: {profile?.longest_streak ?? 0} days</span>
+            <span>•</span>
+            <span>{email}</span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ACCOUNT SETTINGS                                          */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <div className="space-y-1">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <span>⚙️</span> Account Settings
+        </h2>
+        <p className="text-xs text-slate-400">Update your profile information</p>
       </div>
 
-      {/* Messages */}
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`p-3 rounded-xl text-sm ${
-            message.type === 'success'
-              ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-              : 'bg-red-500/10 border border-red-500/20 text-red-400'
-          }`}
-        >
-          {message.text}
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {message && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className={`p-3 rounded-xl text-sm ${
+              message.type === 'success'
+                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                : 'bg-red-500/10 border border-red-500/20 text-red-400'
+            }`}
+          >
+            {message.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Avatar */}
+      {/* Avatar Picker */}
       <div className="rounded-xl bg-white/[0.03] border border-white/10 p-4 space-y-3">
         <label className="text-sm font-medium text-slate-300">Avatar</label>
         <div className="flex gap-2 mb-2">
@@ -217,12 +314,6 @@ export default function SettingsPage() {
         <p className="text-[10px] text-slate-500">Letters, numbers, and underscores only. Min 3 characters.</p>
       </div>
 
-      {/* Email (read only) */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/10 p-4 space-y-2">
-        <label className="text-sm font-medium text-slate-300">Email</label>
-        <p className="text-sm text-slate-400">{email}</p>
-      </div>
-
       {/* Save Button */}
       <button
         onClick={handleSave}
@@ -232,17 +323,25 @@ export default function SettingsPage() {
         {saving ? 'Saving...' : 'Save Changes'}
       </button>
 
-      {/* Sign Out */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* QUICK ACTIONS                                             */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <div className="space-y-1 pt-2">
+        <h2 className="text-lg font-bold text-white">Quick Actions</h2>
+      </div>
+
       <button
         onClick={handleSignOut}
-        className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 font-medium transition"
+        className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 font-medium transition flex items-center justify-center gap-2"
       >
-        Sign Out
+        <span>🚪</span> Sign Out
       </button>
 
-      {/* Delete Account */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* DANGER ZONE                                               */}
+      {/* ═══════════════════════════════════════════════════════════ */}
       <div className="rounded-xl bg-red-500/5 border border-red-500/10 p-4 space-y-3">
-        <h3 className="text-sm font-medium text-red-400">Danger Zone</h3>
+        <h3 className="text-sm font-medium text-red-400">⚠️ Danger Zone</h3>
         <p className="text-xs text-slate-400">
           Permanently delete your account and all data. This action cannot be undone.
         </p>
@@ -282,4 +381,11 @@ export default function SettingsPage() {
       </div>
     </div>
   );
+}
+
+// Helper: approximate XP needed for next level (matches level.ts formula)
+function getXpForNextLevel(level: number): number {
+  const current = Math.floor(100 * Math.pow(level, 1.5));
+  const next = Math.floor(100 * Math.pow(level + 1, 1.5));
+  return next - current;
 }

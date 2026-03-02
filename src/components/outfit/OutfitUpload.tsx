@@ -54,7 +54,7 @@ export default function OutfitUpload({ onSubmit, isLoading = false }: OutfitUplo
 
   // ── File Selection with auto-compression ──────────────
 
-  const compressImage = useCallback(async (file: File, maxSizeKB = 900): Promise<File> => {
+  const compressImage = useCallback(async (file: File, maxSizeKB = 500): Promise<File> => {
     // If already small enough, return as-is
     if (file.size <= maxSizeKB * 1024) return file;
 
@@ -62,8 +62,8 @@ export default function OutfitUpload({ onSubmit, isLoading = false }: OutfitUplo
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // Scale down to max 1200px on longest side
-        const maxDim = 1200;
+        // Scale down to max 800px on longest side (keeps quality, avoids 413)
+        const maxDim = 800;
         let w = img.width;
         let h = img.height;
         if (w > maxDim || h > maxDim) {
@@ -74,17 +74,28 @@ export default function OutfitUpload({ onSubmit, isLoading = false }: OutfitUplo
         canvas.height = h;
         const ctx = canvas.getContext('2d')!;
         ctx.drawImage(img, 0, 0, w, h);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-            } else {
-              resolve(file);
-            }
-          },
-          'image/jpeg',
-          0.7,
-        );
+
+        // Try progressively lower quality until under maxSizeKB
+        const tryCompress = (quality: number) => {
+          canvas.toBlob(
+            (blob) => {
+              if (blob && blob.size <= maxSizeKB * 1024) {
+                resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+              } else if (quality > 0.2) {
+                // Try lower quality
+                tryCompress(quality - 0.1);
+              } else if (blob) {
+                // Give up, use whatever we got
+                resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+              } else {
+                resolve(file);
+              }
+            },
+            'image/jpeg',
+            quality,
+          );
+        };
+        tryCompress(0.6);
       };
       img.onerror = () => resolve(file);
       img.src = URL.createObjectURL(file);

@@ -23,7 +23,7 @@ export async function GET() {
     const admin = createAdminClient();
     const { data: profile } = await admin
       .from('users')
-      .select('id, display_name, email, coins, total_xp, level, streak_days, longest_streak, theme')
+      .select('id, display_name, username, avatar_url, email, coins, total_xp, current_level_xp, level, streak_days, longest_streak, theme')
       .eq('id', user.id)
       .single();
 

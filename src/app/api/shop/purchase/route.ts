@@ -82,8 +82,9 @@ export async function POST(request: NextRequest) {
     // Execute purchase (use admin to bypass RLS)
     const newBalance = profile.coins - item.price_coins;
 
-    // Deduct coins
+    // Deduct coins from both tables
     await admin.from('profiles').update({ coins: newBalance }).eq('id', user.id);
+    await admin.from('users').update({ coins: newBalance }).eq('id', user.id);
 
     // Record purchase
     await admin.from('user_purchases').insert({

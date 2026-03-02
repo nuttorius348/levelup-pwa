@@ -267,7 +267,7 @@ export default function WorkoutSessionView({
             Exercise {session.currentExerciseIndex + 1} of {totalExercises}
           </span>
           <span className="text-xs text-zinc-600">
-            {session.totalVolume.toLocaleString()} lbs volume
+            {(session.totalVolume ?? 0).toLocaleString()} lbs volume
           </span>
         </div>
 
@@ -422,7 +422,7 @@ export default function WorkoutSessionView({
             <div>
               <span className="text-zinc-500">Volume</span>
               <p className="font-bold text-white">
-                {session.totalVolume.toLocaleString()}
+                {(session.totalVolume ?? 0).toLocaleString()}
               </p>
             </div>
           </div>

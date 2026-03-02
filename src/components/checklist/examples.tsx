@@ -72,7 +72,7 @@ export function ChecklistDashboard({ userId }: { userId: string }) {
           {/* Total XP */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 text-center shadow-lg">
             <div className="text-3xl font-black text-green-600 dark:text-green-400">
-              {stats.totalXP.toLocaleString()}
+              {(stats.totalXP ?? 0).toLocaleString()}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
               Total XP
@@ -82,7 +82,7 @@ export function ChecklistDashboard({ userId }: { userId: string }) {
           {/* Coins */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 text-center shadow-lg">
             <div className="text-3xl font-black text-yellow-600 dark:text-yellow-400">
-              {stats.coins.toLocaleString()}
+              {(stats.coins ?? 0).toLocaleString()}
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
               Coins

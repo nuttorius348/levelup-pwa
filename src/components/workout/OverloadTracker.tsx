@@ -230,7 +230,7 @@ export default function OverloadTracker({
               Volume
             </p>
             <p className="mt-0.5 text-lg font-bold text-white">
-              {latestRecord.totalVolume.toLocaleString()}
+              {(latestRecord.totalVolume ?? 0).toLocaleString()}
             </p>
             {trendVolume !== 0 && (
               <p
@@ -238,7 +238,7 @@ export default function OverloadTracker({
                   trendVolume > 0 ? 'text-green-400' : 'text-red-400'
                 }`}
               >
-                {trendVolume > 0 ? '+' : ''}{trendVolume.toLocaleString()}
+                {trendVolume > 0 ? '+' : ''}{(trendVolume ?? 0).toLocaleString()}
               </p>
             )}
           </div>
@@ -301,7 +301,7 @@ export default function OverloadTracker({
                       ? `Max: ${pr.value} lbs`
                       : pr.type === 'reps'
                         ? `Reps: ${pr.value}`
-                        : `Vol: ${pr.value.toLocaleString()}`}
+                        : `Vol: ${(pr.value ?? 0).toLocaleString()}`}
                 </span>
                 {pr.improvement > 0 && (
                   <span className="text-[10px] text-green-400">

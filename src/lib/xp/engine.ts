@@ -206,24 +206,32 @@ export async function grantXP(params: GrantXPParams): Promise<GrantXPResult> {
     .eq('id', userId);
 
   // ── 11B. Sync to profiles table (used by layout/leaderboard) ─
+  // Use upsert to create the profiles row if it doesn't exist yet
   await supabase
     .from('profiles')
-    .update({
+    .upsert({
+      id: userId,
       total_xp: newTotalXP,
       current_level_xp: levelInfo.xpInLevel,
       coins: newCoins,
       level: newLevel,
-    })
-    .eq('id', userId);
+    }, { onConflict: 'id' });
 
   // ── 12. Level-up bonus ──────────────────────────────────────
   let levelUp: LevelUpEvent | undefined;
   if (newLevel > oldLevel) {
     const levelUpCoins = newLevel * LEVEL_UP_COIN_MULTIPLIER;
+    const coinsAfterLevelUp = newCoins + levelUpCoins;
 
     await supabase
       .from('users')
-      .update({ coins: newCoins + levelUpCoins })
+      .update({ coins: coinsAfterLevelUp })
+      .eq('id', userId);
+
+    // Also sync level-up coins to profiles
+    await supabase
+      .from('profiles')
+      .update({ coins: coinsAfterLevelUp })
       .eq('id', userId);
 
     await supabase.from('xp_transactions').insert({
@@ -260,9 +268,14 @@ export async function grantXP(params: GrantXPParams): Promise<GrantXPResult> {
         metadata: { streak_days: profile.streak_days, bonus_coins: reward.coins },
       });
       // Extra coins from milestone (beyond the XP→coin conversion)
+      const milestoneCoins = newCoins + coinsEarned + reward.coins;
       await supabase
         .from('users')
-        .update({ coins: newCoins + coinsEarned + reward.coins })
+        .update({ coins: milestoneCoins })
+        .eq('id', userId);
+      await supabase
+        .from('profiles')
+        .update({ coins: milestoneCoins })
         .eq('id', userId);
     }
   }

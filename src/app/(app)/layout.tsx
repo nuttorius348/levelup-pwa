@@ -19,12 +19,25 @@ export default async function AppLayout({
     redirect('/login');
   }
 
-  // Fetch profile for XP bar
-  const { data: profile } = await supabase
+  // Fetch profile for XP bar — try profiles first, fall back to users
+  let profile: any = null;
+  const { data: profileData } = await supabase
     .from('profiles')
     .select('level, total_xp, current_level_xp, coins, streak_days, display_name, avatar_url')
     .eq('id', user.id)
     .single();
+  
+  if (profileData) {
+    profile = profileData;
+  } else {
+    // Fallback: read from users table
+    const { data: userData } = await supabase
+      .from('users')
+      .select('level, total_xp, current_level_xp, coins, streak_days, display_name, avatar_url')
+      .eq('id', user.id)
+      .single();
+    profile = userData;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

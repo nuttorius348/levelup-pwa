@@ -9,7 +9,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRoutineSchema, updateRoutineSchema } from '@/lib/validators/routines';
 
-// Ensure user profile exists in public.users (required for FK constraints)
+// Ensure user profile exists in public.users AND profiles (required for FK constraints)
 async function ensureUserProfile(userId: string) {
   try {
     const admin = createAdminClient();
@@ -21,7 +21,7 @@ async function ensureUserProfile(userId: string) {
 
     if (!data) {
       // Create profile — the trigger may not have run
-      await admin.from('users').insert({
+      const profileData = {
         id: userId,
         display_name: 'User',
         level: 1,
@@ -30,7 +30,35 @@ async function ensureUserProfile(userId: string) {
         coins: 0,
         streak_days: 0,
         longest_streak: 0,
-      });
+      };
+      await admin.from('users').upsert(profileData, { onConflict: 'id' });
+      await admin.from('profiles').upsert(profileData, { onConflict: 'id' });
+    } else {
+      // Ensure profiles row also exists
+      const { data: profileRow } = await admin
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      if (!profileRow) {
+        const { data: userData } = await admin
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        if (userData) {
+          await admin.from('profiles').upsert({
+            id: userId,
+            display_name: userData.display_name ?? 'User',
+            level: userData.level ?? 1,
+            total_xp: userData.total_xp ?? 0,
+            current_level_xp: userData.current_level_xp ?? 0,
+            coins: userData.coins ?? 0,
+            streak_days: userData.streak_days ?? 0,
+            longest_streak: userData.longest_streak ?? 0,
+          }, { onConflict: 'id' });
+        }
+      }
     }
   } catch {
     // Best-effort — continue anyway

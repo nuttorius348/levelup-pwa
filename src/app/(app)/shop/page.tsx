@@ -73,9 +73,20 @@ export default function ShopPage() {
     await fetch('/api/shop/equip', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ itemId: item.id }),
+      body: JSON.stringify({ itemId: item.id, action: item.equipped ? 'unequip' : 'equip' }),
     });
     await fetchItems();
+  };
+
+  const handleActivateBoost = async (item: UserInventoryItem) => {
+    const res = await fetch('/api/shop/activate-boost', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId: item.id }),
+    });
+    if (res.ok) {
+      await fetchItems();
+    }
   };
 
   return (
@@ -140,6 +151,7 @@ export default function ShopPage() {
                   item={item}
                   onPurchase={() => setPurchaseItem(item)}
                   onEquip={() => handleEquip(item)}
+                  onActivate={item.category === 'boost' && item.owned ? () => handleActivateBoost(item) : undefined}
                 />
               </motion.div>
             ))}
