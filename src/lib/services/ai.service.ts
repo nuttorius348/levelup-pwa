@@ -83,7 +83,7 @@ function normaliseOutfitRating(raw: Record<string, unknown>): OutfitRatingResult
     occasionMatch: typeof raw.occasionMatch === 'string' ? raw.occasionMatch : 'casual',
     feedback: typeof raw.feedback === 'string' ? raw.feedback : 'No feedback available.',
     suggestions: Array.isArray(raw.suggestions)
-      ? (raw.suggestions as string[]).slice(0, 6)
+      ? (raw.suggestions as string[]).slice(0, 10)
       : [],
     confidence: clamp(Number(raw.confidence) || 0.5, 0, 1),
   };

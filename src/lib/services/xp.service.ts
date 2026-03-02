@@ -345,6 +345,16 @@ export class XPService {
         })
         .eq('id', userId);
 
+      // Sync streak to profiles table (used by leaderboard/layout)
+      await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          streak_days: newStreak,
+          longest_streak: newLongest,
+          last_active_date: today,
+        }, { onConflict: 'id' });
+
       return true;
     } catch (error) {
       console.error('[XPService] Failed to update streak:', error);

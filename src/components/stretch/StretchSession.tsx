@@ -370,7 +370,7 @@ export default function StretchSession({
       </div>
 
       {/* Routine List */}
-      <div className="px-4 space-y-3 pb-8">
+      <div className="px-4 space-y-3 pb-16">
         {filteredRoutines.map((routine) => (
           <RoutineCard
             key={routine.id}

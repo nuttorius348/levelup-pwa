@@ -21,29 +21,31 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/utils/rate-limit';
 
 // ── Fallback outfit rating when AI is unavailable ────────────
 function generateFallbackRating(occasion?: string | null, style?: string | null) {
-  const scores = [6.5, 7.0, 7.5, 8.0, 8.5];
+  const scores = [3.5, 4.0, 4.5, 5.0, 5.5];
   const idx = new Date().getSeconds() % scores.length;
   const score = scores[idx]!;
 
-  const styleTags = ['casual', 'modern', 'clean'];
+  const styleTags = ['basic', 'casual', 'everyday', 'unremarkable'];
   const suggestions = [
-    'Try adding a statement accessory to elevate the look.',
-    'Consider layering for added dimension.',
-    'A belt or watch could tie this outfit together nicely.',
+    'Consider adding a statement accessory like a quality watch or minimal bracelet to show intentionality.',
+    'Try layering with a structured jacket or open button-down to add visual depth and dimension.',
+    'Swap generic sneakers for clean leather shoes or chunky fashion sneakers in a coordinating color.',
+    'Experiment with color — a single bold accent piece can transform an otherwise forgettable outfit.',
+    'Make sure everything fits properly — even basic clothes look 10x better when tailored to your body.',
   ];
   const feedback = occasion
-    ? `Solid choice for ${occasion}! The overall look is well put-together with good proportions.`
-    : 'Looking good! The outfit has a nice balance and shows thought in the styling.';
+    ? `For ${occasion}, this outfit needs significant work. The overall look reads as hastily thrown together rather than intentionally styled. While the basic foundation is there, it lacks the polish, coordination, and distinctive details that would make it appropriate for the occasion. Focus on fit, color coordination, and adding at least one statement piece.`
+    : 'This outfit reads as a default — the kind of thing you grab when you are not thinking about what to wear. The pieces are functional but lack intention, coordination, or any standout styling choices. There is no color story, no interesting textures, and no accessories to elevate the look. It is forgettable, which in fashion terms means it is underperforming.';
 
   return {
     overallScore: score,
     styleTags,
-    colorHarmony: Math.min(score + 0.5, 10),
+    colorHarmony: Math.max(score - 1, 1),
     fitScore: score,
-    occasionMatch: occasion ? score : 7.0,
+    occasionMatch: occasion ?? 'running errands',
     feedback,
     suggestions,
-    confidence: 0.6,
+    confidence: 0.4,
   };
 }
 

@@ -212,7 +212,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-16">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">

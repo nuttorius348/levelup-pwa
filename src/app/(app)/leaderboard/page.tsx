@@ -61,7 +61,7 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-16">
       {/* Header */}
       <div className="text-center">
         <h1 className="text-2xl font-bold">🏆 Leaderboard</h1>

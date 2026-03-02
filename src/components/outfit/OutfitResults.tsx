@@ -168,7 +168,7 @@ export default function OutfitResults({
   const improvementDelta = previousBest ? rating.overallScore - previousBest : 0;
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-4 pb-8">
+    <div className="w-full max-w-md mx-auto space-y-4 pb-16">
       {/* Header: Score Circle */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}

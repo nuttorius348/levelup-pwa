@@ -142,7 +142,7 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8 max-w-md mx-auto">
+    <div className="space-y-6 pb-16 max-w-md mx-auto">
 
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* PROFILE CARD                                              */}
